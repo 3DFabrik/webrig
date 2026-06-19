@@ -31,13 +31,85 @@ const state = {
     txTimer: null,
 };
 
-// ─── SocketIO (placeholder — will connect when backend is ready)
+// ─── SocketIO ──────────────────────────────────
 let socket = null;
 
 function initSocket() {
-    // TODO: socket = io({ auth: { token: '...' } });
-    // For now, simulate connection state
-    setConnectionState(false);
+    // Load socket.io client from CDN if not present
+    if (typeof io === 'undefined') {
+        const script = document.createElement('script');
+        script.src = '/static/js/socket.io.min.js';
+        script.onload = () => connectSocket();
+        script.onerror = () => {
+            // Fallback: load from CDN
+            const cdn = document.createElement('script');
+            cdn.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+            cdn.onload = () => connectSocket();
+            cdn.onerror = () => console.error('Cannot load socket.io');
+            document.head.appendChild(cdn);
+        };
+        document.head.appendChild(script);
+    } else {
+        connectSocket();
+    }
+}
+
+function connectSocket() {
+    socket = io({ transports: ['websocket', 'polling'] });
+
+    socket.on('connect', () => {
+        console.log('SocketIO connected');
+    });
+
+    socket.on('disconnect', () => {
+        console.log('SocketIO disconnected');
+        setConnectionState(false);
+    });
+
+    socket.on('connection', (connected) => {
+        setConnectionState(connected);
+    });
+
+    socket.on('frequency', (freq) => {
+        state.frequency = freq;
+        updateFreqDisplay();
+    });
+
+    socket.on('mode', (data) => {
+        if (typeof data === 'string') {
+            state.mode = data;
+        } else {
+            state.mode = data.mode;
+        }
+        document.getElementById('mode-select').value = state.mode;
+    });
+
+    socket.on('vfo', (vfo) => {
+        state.vfo = vfo;
+        state.selectedVFO = vfo;
+        document.getElementById('vfo-a-btn').classList.toggle('active', vfo === 'VFOA');
+        document.getElementById('vfo-b-btn').classList.toggle('active', vfo === 'VFOB');
+    });
+
+    socket.on('ptt', (on) => {
+        state.ptt = on;
+        const btn = document.getElementById('ptt-btn');
+        const led = document.getElementById('tx-led');
+        btn.classList.toggle('active', on);
+        led.classList.toggle('tx-active', on);
+        led.textContent = on ? 'TX' : 'RX';
+    });
+
+    socket.on('smeter', (db) => {
+        updateSmeter(db);
+    });
+
+    socket.on('split', (on) => {
+        state.split = on;
+        const btn = document.getElementById('split-btn');
+        btn.classList.toggle('active', on);
+        btn.textContent = on ? 'ON' : 'OFF';
+    });
 }
 
 // ─── Connection State ─────────────────────────────
@@ -677,19 +749,6 @@ function init() {
     }
 
     initSocket();
-
-    // Simulated S-Meter for testing
-    if (!socket) {
-        simulateSmeter();
-    }
-}
-
-function simulateSmeter() {
-    // Demo: random S-Meter values for frontend testing
-    setInterval(() => {
-        const baseDb = -30 + Math.random() * 40; // S4-S7 range
-        updateSmeter(baseDb);
-    }, 200);
 }
 
 document.addEventListener('DOMContentLoaded', init);
