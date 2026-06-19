@@ -253,3 +253,30 @@ async def audio_devices():
         return {"capture": result, "playback": playback}
     except Exception:
         return {"capture": result, "playback": []}
+
+
+@app.get("/api/rig/models")
+async def rig_models():
+    """Return all supported Hamlib models for dropdown population."""
+    try:
+        proc = subprocess.run(
+            ["rigctl", "-l"],
+            capture_output=True, text=True, timeout=5
+        )
+        models = []
+        for line in proc.stdout.splitlines()[2:]:  # skip header
+            parts = line.split(None, 4)
+            if len(parts) >= 4:
+                model_id = int(parts[0])
+                mfg = parts[1]
+                name = parts[2]
+                version = parts[3] if len(parts) > 3 else ""
+                models.append({
+                    "id": model_id,
+                    "mfg": mfg,
+                    "name": name,
+                    "label": f"{mfg} {name}",
+                })
+        return {"models": models, "count": len(models)}
+    except Exception as e:
+        return {"models": [], "count": 0, "error": str(e)}

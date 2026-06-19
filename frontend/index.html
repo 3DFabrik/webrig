@@ -519,7 +519,12 @@
                     <label>rigctld Port</label>
                     <input type="number" id="setup-rigctld-port" value="4532">
                     <label>Hamlib Model</label>
-                    <input type="text" id="setup-model" placeholder="e.g. 1038 (Yaesu FT-991)">
+                    <div class="model-select-wrapper">
+                        <input type="text" id="setup-model-search" placeholder="Search: Yaesu FT-991..." list="model-list" oninput="filterModels(this.value)">
+                        <datalist id="model-list"></datalist>
+                        <input type="hidden" id="setup-model">
+                        <div id="model-search-results" class="model-search-results"></div>
+                    </div>
                     <label>Serial Device</label>
                     <input type="text" id="setup-device" value="/dev/ttyUSB0">
                     <label>Baudrate</label>

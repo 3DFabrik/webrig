@@ -861,6 +861,11 @@ async function loadConfigIntoSetup() {
             document.getElementById('setup-rigctld-host').value = r.rigctld_host || '127.0.0.1';
             document.getElementById('setup-rigctld-port').value = r.rigctld_port || 4532;
             document.getElementById('setup-model').value = r.model || '';
+            // If model ID exists, try to find its label for the search field
+            if (r.model) {
+                document.getElementById('setup-model-search').value = '';
+                document.getElementById('setup-model-search').placeholder = `Model #${r.model} (search to rename...)`;
+            }
             document.getElementById('setup-device').value = r.device || '/dev/ttyUSB0';
             document.getElementById('setup-baudrate').value = r.baudrate || 9600;
             document.getElementById('setup-ptt-mode').value = p.mode || 'hamlib';
@@ -870,6 +875,75 @@ async function loadConfigIntoSetup() {
         console.error('Config load failed:', e);
     }
 }
+
+// ─── Hamlib Model Search ────────────────────────
+let allModels = [];
+
+async function loadModels() {
+    try {
+        const resp = await fetch('/api/rig/models');
+        const data = await resp.json();
+        allModels = data.models || [];
+        // Populate datalist for native autocomplete
+        const datalist = document.getElementById('model-list');
+        datalist.innerHTML = '';
+        allModels.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.label;
+            opt.dataset.id = m.id;
+            datalist.appendChild(opt);
+        });
+    } catch (e) {
+        console.error('Failed to load models:', e);
+    }
+}
+
+function filterModels(query) {
+    const results = document.getElementById('model-search-results');
+    const q = query.toLowerCase().trim();
+
+    if (!q) {
+        results.classList.remove('visible');
+        return;
+    }
+
+    const matches = allModels
+        .filter(m => m.label.toLowerCase().includes(q))
+        .slice(0, 30);
+
+    if (matches.length === 0) {
+        results.innerHTML = '<div class="model-item">No match</div>';
+        results.classList.add('visible');
+        return;
+    }
+
+    results.innerHTML = matches.map(m =>
+        `<div class="model-item" onclick="selectModel(${m.id}, '${m.label.replace(/'/g, "\\'")}')">
+            <span><span class="model-name">${m.name}</span> <span class="model-mfg">${m.mfg}</span></span>
+            <span class="model-id">#${m.id}</span>
+        </div>`
+    ).join('');
+    results.classList.add('visible');
+
+    // Also check if text matches a label exactly → set model ID
+    const exact = allModels.find(m => m.label.toLowerCase() === q);
+    if (exact) {
+        document.getElementById('setup-model').value = exact.id;
+    }
+}
+
+function selectModel(id, label) {
+    document.getElementById('setup-model').value = id;
+    document.getElementById('setup-model-search').value = label;
+    document.getElementById('model-search-results').classList.remove('visible');
+}
+
+// Close search results when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.model-select-wrapper')) {
+        document.getElementById('model-search-results')?.classList.remove('visible');
+    }
+});
 
 // ─── Init ────────────────────────────────────────
 function init() {
@@ -895,6 +969,7 @@ function init() {
 
     initSocket();
     loadConfigIntoSetup();
+    loadModels();
 }
 
 document.addEventListener('DOMContentLoaded', init);
