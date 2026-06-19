@@ -1,0 +1,8 @@
+config.local.yaml
+users.json
+__pycache__/
+*.pyc
+venv/
+*.log
+.DS_Store
+node_modules/

@@ -1,0 +1,37 @@
+# WebRig Configuration
+# Copy to config.local.yaml and adjust for your setup.
+
+radio:
+  rigctld_host: "127.0.0.1"
+  rigctld_port: 4532
+  poll_interval_ms: 200          # S-Meter polling interval
+  freq_poll_interval_ms: 1000    # Frequency/mode polling interval
+  reconnect_delay_s: 3           # retry delay if rigctld unreachable
+
+audio:
+  sample_rate: 8000
+  channels: 1
+  chunk_ms: 80                   # milliseconds per audio chunk
+  device_rx: "default"           # ALSA capture device
+  device_tx: "default"           # ALSA playback device
+  max_chunk_ms: 200              # adaptive: max chunk on bad connections
+  squelch_enabled: true
+  squelch_threshold: 300
+
+ptt:
+  mode: "hamlib"                 # "hamlib" | "serial_rts" | "serial_dtr" | "vox"
+  serial_port: ""                # only for serial_rts/serial_dtr
+
+server:
+  host: "0.0.0.0"
+  port: 8081
+  cors_origins: ["*"]
+
+auth:
+  jwt_secret: "CHANGE-ME-IN-PRODUCTION"
+  session_timeout_minutes: 120
+  users_file: "users.json"
+
+logging:
+  level: "INFO"
+  format: "text"                 # "json" or "text"
