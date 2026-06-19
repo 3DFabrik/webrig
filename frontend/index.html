@@ -7,11 +7,493 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <div id="app">
-        <h1>🔊 WebRig</h1>
-        <p>Universelles Funkgeräte Web-Interface</p>
-        <p style="color: #888;">Backend verbunden — Frontend folgt...</p>
+
+<!-- ═══ Top Bar ═══ -->
+<header id="topbar">
+    <div class="logo">🔊 WebRig</div>
+    <div class="status">
+        <span id="rigctld-status" class="status-dot disconnected" title="rigctld"></span>
+        <span id="rigctld-status-text">Disconnected</span>
     </div>
-    <script src="/static/js/app.js"></script>
+    <div class="spacer"></div>
+    <div class="user-info">
+        <span id="active-user"></span>
+    </div>
+    <button id="btn-admin" class="header-btn hidden" onclick="showView('admin')">⚙️ Admin</button>
+    <button id="btn-stations" class="header-btn" onclick="showView('stations')">📻 Stations</button>
+    <button id="btn-logout" class="header-btn danger" onclick="logout()">⏻ Logout</button>
+</header>
+
+<!-- ═══ Main Operator View ═══ -->
+<div id="view-operator" class="view active">
+
+<div class="op-layout">
+
+    <!-- ─── Left Column: VFO + Macros ─── -->
+    <div class="col-left">
+        <div class="panel vfo-panel">
+            <div class="panel-title">VFO Control</div>
+
+            <div class="vfo-row">
+                <button class="vfo-select active" id="vfo-a-btn" onclick="selectVFO('VFOA')">VFO-A</button>
+                <button class="vfo-select" id="vfo-b-btn" onclick="selectVFO('VFOB')">VFO-B</button>
+                <button class="vfo-select small" onclick="vfoSwap()">A⇄B</button>
+                <button class="vfo-select small" onclick="vfoEqual()">A=B</button>
+            </div>
+
+            <div class="freq-display" id="freq-display">
+                <span class="freq-digit" data-pos="0">1</span>
+                <span class="freq-digit" data-pos="1">4</span>
+                <span class="freq-digit" data-pos="2">5</span>
+                <span class="freq-sep">.</span>
+                <span class="freq-digit" data-pos="3">5</span>
+                <span class="freq-digit" data-pos="4">0</span>
+                <span class="freq-digit" data-pos="5">0</span>
+                <span class="freq-digit" data-pos="6">0</span>
+                <span class="freq-unit">MHz</span>
+            </div>
+
+            <div class="freq-controls">
+                <div class="freq-step-label">Step:</div>
+                <button class="step-btn" data-step="10" onclick="tuneFreq(10000)">±10k</button>
+                <button class="step-btn" data-step="1" onclick="tuneFreq(1000)">±1k</button>
+                <button class="step-btn" data-step="0.1" onclick="tuneFreq(100)">±100</button>
+                <button class="step-btn" data-step="12.5" onclick="tuneFreq(12500)">±12.5k</button>
+            </div>
+
+            <div class="mode-row">
+                <label>Mode:</label>
+                <select id="mode-select" onchange="setMode(this.value)">
+                    <option value="FM">FM</option>
+                    <option value="USB">USB</option>
+                    <option value="LSB">LSB</option>
+                    <option value="AM">AM</option>
+                    <option value="CW">CW</option>
+                    <option value="RTTY">RTTY</option>
+                    <option value="DIGI">DIGI</option>
+                </select>
+            </div>
+
+            <div class="rptr-row">
+                <label>Shift:</label>
+                <select id="shift-select" onchange="setShift(this.value)">
+                    <option value="NONE">Simplex</option>
+                    <option value="+">+</option>
+                    <option value="-">-</option>
+                </select>
+                <label>Offset:</label>
+                <input type="text" id="offset-input" value="0.600" size="6" onchange="setOffset(this.value)"> MHz
+            </div>
+
+            <div class="tone-row">
+                <label>Tone:</label>
+                <select id="ctcss-select" onchange="setCTCSS(this.value)">
+                    <option value="0">OFF</option>
+                </select>
+                <label>DCS:</label>
+                <select id="dcs-select" onchange="setDCS(this.value)">
+                    <option value="0">OFF</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="panel macros-panel">
+            <div class="panel-title">Quick Macros</div>
+            <div id="macro-list" class="macro-list"></div>
+            <button class="macro-add" onclick="addMacro()">+ Add Macro</button>
+        </div>
+    </div>
+
+    <!-- ─── Center Column: S-Meter + Stations ─── -->
+    <div class="col-center">
+        <div class="panel smeter-panel">
+            <div class="panel-title">
+                S-Meter
+                <span class="smeter-controls">
+                    <button class="smeter-scale-btn active" onclick="setSmeterScale('S')">S-Units</button>
+                    <button class="smeter-scale-btn" onclick="setSmeterScale('DBM')">dBm</button>
+                    <button class="smeter-scale-btn" onclick="setSmeterScale('UV')">μV</button>
+                    <button class="smeter-scale-btn" onclick="setSmeterScale('RAW')">Raw</button>
+                </span>
+            </div>
+
+            <!-- Analog S-Meter Bar -->
+            <div class="smeter-bar-container">
+                <div class="smeter-scale">
+                    <span class="smark">S1</span>
+                    <span class="smark">S3</span>
+                    <span class="smark">S5</span>
+                    <span class="smark">S7</span>
+                    <span class="smark s9">S9</span>
+                    <span class="smark">+20</span>
+                    <span class="smark">+40</span>
+                    <span class="smark">+60</span>
+                </div>
+                <div class="smeter-bar">
+                    <div class="smeter-fill" id="smeter-fill"></div>
+                    <div class="smeter-peak" id="smeter-peak"></div>
+                </div>
+            </div>
+
+            <!-- Digital Readout -->
+            <div class="smeter-readout">
+                <span id="smeter-s-units">—</span>
+                <span id="smeter-dbm">—</span>
+                <span id="smeter-uv">—</span>
+                <span id="smeter-raw" class="debug">raw: —</span>
+            </div>
+
+            <!-- Peak/Average Controls -->
+            <div class="smeter-options">
+                <label>Peak Hold:</label>
+                <input type="range" id="peak-hold-time" min="0" max="10" value="3" step="1">
+                <span id="peak-hold-val">3s</span>
+                <span class="sep">│</span>
+                <label>Attack:</label>
+                <button class="attack-btn active" onclick="setAttack('fast')">Fast</button>
+                <button class="attack-btn" onclick="setAttack('slow')">Slow</button>
+                <span class="sep">│</span>
+                <label>Poll:</label>
+                <select id="poll-rate" onchange="setPollRate(this.value)">
+                    <option value="100">Fast (100ms)</option>
+                    <option value="200" selected>Normal (200ms)</option>
+                    <option value="500">Slow (500ms)</option>
+                </select>
+            </div>
+
+            <!-- Live Graph -->
+            <div class="smeter-graph-section">
+                <div class="graph-controls">
+                    <button onclick="toggleRecording()" id="record-btn">⏺ Record</button>
+                    <button onclick="exportRecording()">⬇ Export</button>
+                    <select id="graph-window" onchange="setGraphWindow(this.value)">
+                        <option value="5">5 min</option>
+                        <option value="30" selected>30 min</option>
+                        <option value="120">2 hours</option>
+                    </select>
+                </div>
+                <canvas id="smeter-graph" width="600" height="120"></canvas>
+            </div>
+
+            <!-- Alarm Section -->
+            <div class="smeter-alarms">
+                <div class="alarm-row">
+                    <input type="checkbox" id="alarm-threshold-enable">
+                    <label>Alarm bei S-Meter ≥</label>
+                    <select id="alarm-threshold">
+                        <option value="5">S5</option>
+                        <option value="7">S7</option>
+                        <option value="9">S9</option>
+                        <option value="11">S9+20</option>
+                    </select>
+                    <span class="sep">│</span>
+                    <input type="checkbox" id="alarm-delta-enable">
+                    <label>QSB-Detektor (Δ > </label>
+                    <input type="number" id="alarm-delta" value="10" size="3"> dB in
+                    <input type="number" id="alarm-delta-time" value="2" size="3">s)
+                </div>
+            </div>
+        </div>
+
+        <div class="panel stations-mini">
+            <div class="panel-title">
+                Stations
+                <input type="text" id="station-search" placeholder="Search..." oninput="filterStations(this.value)" class="station-search">
+            </div>
+            <div id="station-list-mini" class="station-list"></div>
+        </div>
+    </div>
+
+    <!-- ─── Right Column: Audio + PTT ─── -->
+    <div class="col-right">
+        <div class="panel audio-panel">
+            <div class="panel-title">Audio</div>
+
+            <div class="audio-control">
+                <label>AF Gain</label>
+                <input type="range" id="af-gain" min="0" max="100" value="50" oninput="setAF(this.value)">
+                <span id="af-val">50%</span>
+            </div>
+            <div class="audio-control">
+                <label>RF Gain</label>
+                <input type="range" id="rf-gain" min="0" max="100" value="100" oninput="setRF(this.value)">
+                <span id="rf-val">100%</span>
+            </div>
+            <div class="audio-control">
+                <label>Squelch</label>
+                <input type="range" id="sql-gain" min="0" max="100" value="20" oninput="setSQL(this.value)">
+                <span id="sql-val">20%</span>
+            </div>
+
+            <div class="audio-meters">
+                <div class="meter-row">
+                    <span class="meter-label">RX</span>
+                    <div class="audio-meter"><div class="audio-meter-fill" id="rx-meter"></div></div>
+                </div>
+                <div class="meter-row">
+                    <span class="meter-label">TX</span>
+                    <div class="audio-meter"><div class="audio-meter-fill tx" id="tx-meter"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel tx-panel">
+            <div class="panel-title">Transmit</div>
+            <div class="mic-control">
+                <label>Mic Gain</label>
+                <input type="range" id="mic-gain" min="0" max="100" value="70" oninput="setMicGain(this.value)">
+                <span id="mic-val">70%</span>
+            </div>
+            <div class="tx-led" id="tx-led">RX</div>
+            <button id="ptt-btn" class="ptt-button" onmousedown="pttDown()" onmouseup="pttUp()" ontouchstart="pttDown()" ontouchend="pttUp()">
+                PTT
+            </button>
+            <div class="tx-timeout">
+                <span id="tx-timeout-display"></span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Footer: Signal Processing -->
+<footer id="signal-footer">
+    <div class="sig-control">
+        <label>AGC</label>
+        <select id="agc-select" onchange="setAGC(this.value)">
+            <option value="OFF">OFF</option>
+            <option value="FAST" selected>FAST</option>
+            <option value="SLOW">SLOW</option>
+            <option value="SUPERFAST">SUPERFAST</option>
+        </select>
+    </div>
+    <div class="sig-control">
+        <label>NB</label>
+        <input type="range" id="nb-slider" min="0" max="100" value="0" oninput="setNB(this.value)">
+    </div>
+    <div class="sig-control">
+        <label>Preamp</label>
+        <button id="preamp-btn" onclick="togglePreamp()">OFF</button>
+    </div>
+    <div class="sig-control">
+        <label>Attenuator</label>
+        <button id="att-btn" onclick="toggleAtt()">OFF</button>
+    </div>
+    <div class="sig-control">
+        <label>Split</label>
+        <button id="split-btn" onclick="toggleSplit()">OFF</button>
+    </div>
+</footer>
+
+</div> <!-- /view-operator -->
+
+
+<!-- ═══ Stations View ═══ -->
+<div id="view-stations" class="view">
+    <div class="panel">
+        <div class="panel-title">
+            📻 Stationsliste (Global)
+            <span class="panel-actions">
+                <button onclick="showView('operator')">← Back</button>
+                <button id="btn-add-station" class="admin-only hidden" onclick="addStation()">+ Add</button>
+                <button onclick="importStations()">⬆ Import</button>
+                <button onclick="exportStations()">⬇ Export</button>
+            </span>
+        </div>
+        <table id="stations-table" class="stations-table">
+            <thead>
+                <tr>
+                    <th>Call</th>
+                    <th>Name</th>
+                    <th>Band</th>
+                    <th>Freq (MHz)</th>
+                    <th>Mode</th>
+                    <th>Shift</th>
+                    <th>Offset</th>
+                    <th>Tone</th>
+                    <th>Location</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="stations-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ═══ Admin View ═══ -->
+<div id="view-admin" class="view admin-only hidden">
+    <div class="admin-tabs">
+        <button class="tab-btn active" onclick="adminTab('interfaces')">Interfaces</button>
+        <button class="tab-btn" onclick="adminTab('dsp')">DSP / Noise</button>
+        <button class="tab-btn" onclick="adminTab('users')">Users</button>
+        <button class="tab-btn" onclick="adminTab('smeter')">S-Meter Cal</button>
+        <button class="tab-btn" onclick="adminTab('system')">System</button>
+        <button class="tab-btn" onclick="adminTab('logs')">Logs</button>
+        <button onclick="showView('operator')" class="tab-btn pull-right">← Back</button>
+    </div>
+
+    <!-- Interfaces Tab -->
+    <div class="admin-tab-content active" id="admin-interfaces">
+        <div class="panel">
+            <div class="panel-title">rigctld / Serial</div>
+            <div class="admin-form-grid">
+                <label>rigctld Host</label>
+                <input type="text" id="cfg-rigctld-host" value="127.0.0.1">
+                <label>rigctld Port</label>
+                <input type="number" id="cfg-rigctld-port" value="4532">
+                <label>Hamlib Model ID</label>
+                <input type="number" id="cfg-hamlib-model" placeholder="e.g. 1038">
+                <label>Serial Device</label>
+                <input type="text" id="cfg-serial-device" value="/dev/ttyUSB0">
+                <label>Baudrate</label>
+                <input type="number" id="cfg-baudrate" value="9600">
+                <label>PTT Mode</label>
+                <select id="cfg-ptt-mode">
+                    <option value="hamlib">Hamlib (CAT)</option>
+                    <option value="serial_rts">Serial RTS</option>
+                    <option value="serial_dtr">Serial DTR</option>
+                    <option value="vox">VOX</option>
+                </select>
+                <label>PTT Serial Port</label>
+                <input type="text" id="cfg-ptt-port" placeholder="(if separate)">
+            </div>
+            <button onclick="testRigctld()" class="admin-action">🔌 Test Connection</button>
+            <button onclick="saveInterfaces()" class="admin-action">💾 Save</button>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Audio Devices</div>
+            <div class="admin-form-grid">
+                <label>RX Device (ALSA)</label>
+                <select id="cfg-rx-device"></select>
+                <label>TX Device (ALSA)</label>
+                <select id="cfg-tx-device"></select>
+                <label>Sample Rate</label>
+                <select id="cfg-sample-rate">
+                    <option value="8000">8000 Hz</option>
+                    <option value="16000">16000 Hz</option>
+                    <option value="48000">48000 Hz</option>
+                </select>
+            </div>
+            <button onclick="scanAudioDevices()" class="admin-action">🔍 Scan Devices</button>
+            <button onclick="testAudio()" class="admin-action">🔊 Test Tone</button>
+        </div>
+    </div>
+
+    <!-- DSP Tab -->
+    <div class="admin-tab-content" id="admin-dsp">
+        <div class="panel">
+            <div class="panel-title">Noise Reduction / DSP</div>
+            <div class="dsp-control">
+                <input type="checkbox" id="dsp-nr-enable">
+                <label>Noise Reduction</label>
+                <input type="range" id="dsp-nr-strength" min="0" max="100" value="50">
+                <span id="dsp-nr-val">50%</span>
+            </div>
+            <div class="dsp-control">
+                <input type="checkbox" id="dsp-notch-enable">
+                <label>Notch Filter</label>
+                <select id="dsp-notch-mode">
+                    <option value="auto">Auto</option>
+                    <option value="manual">Manual</option>
+                </select>
+                <input type="number" id="dsp-notch-freq" placeholder="Hz" value="1000" min="100" max="5000">
+            </div>
+            <div class="dsp-control">
+                <input type="checkbox" id="dsp-comp-enable">
+                <label>TX Compressor</label>
+                <input type="range" id="dsp-comp-strength" min="0" max="100" value="30">
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-title">Equalizer</div>
+            <div class="eq-row">
+                <label>RX:</label>
+                <label>Bass</label>
+                <input type="range" id="eq-rx-bass" min="-12" max="12" value="0">
+                <label>Mid</label>
+                <input type="range" id="eq-rx-mid" min="-12" max="12" value="0">
+                <label>Treble</label>
+                <input type="range" id="eq-rx-treble" min="-12" max="12" value="0">
+            </div>
+            <div class="eq-row">
+                <label>TX:</label>
+                <label>Bass</label>
+                <input type="range" id="eq-tx-bass" min="-12" max="12" value="0">
+                <label>Mid</label>
+                <input type="range" id="eq-tx-mid" min="-12" max="12" value="0">
+                <label>Treble</label>
+                <input type="range" id="eq-tx-treble" min="-12" max="12" value="0">
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Tab -->
+    <div class="admin-tab-content" id="admin-users">
+        <div class="panel">
+            <div class="panel-title">User Management</div>
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Admin</th>
+                        <th>Timeout</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+            <div class="user-add-form">
+                <input type="text" id="new-username" placeholder="Username">
+                <input type="password" id="new-password" placeholder="Password">
+                <input type="checkbox" id="new-admin"><label>Admin</label>
+                <input type="text" id="new-timeout" value="02:00" size="6">
+                <button onclick="addUser()">+ Add User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- S-Meter Calibration Tab -->
+    <div class="admin-tab-content" id="admin-smeter">
+        <div class="panel">
+            <div class="panel-title">S-Meter Kalibrierung</div>
+            <div class="cal-form">
+                <label>Offset (dB)</label>
+                <input type="number" id="cal-offset" value="0" step="1">
+                <label>Scale</label>
+                <input type="number" id="cal-scale" value="1" step="0.1">
+                <div class="cal-preview">
+                    Raw <span id="cal-raw">0</span> → Calibrated <span id="cal-result">0</span> dBm
+                </div>
+            </div>
+            <button onclick="startCalWizard()" class="admin-action">🧙 Kalibrierungs-Wizard</button>
+            <button onclick="saveCalibration()" class="admin-action">💾 Save</button>
+        </div>
+    </div>
+
+    <!-- System Tab -->
+    <div class="admin-tab-content" id="admin-system">
+        <div class="panel">
+            <div class="panel-title">System Status</div>
+            <div class="sys-info">
+                <div>rigctld: <span id="sys-rigctld-status">—</span> <button onclick="restartRigctld()">Restart</button></div>
+                <div>UDEV Symlinks: <span id="sys-udev-status">—</span></div>
+                <div>Audio Devices: <span id="sys-audio-count">—</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs Tab -->
+    <div class="admin-tab-content" id="admin-logs">
+        <div class="panel">
+            <div class="panel-title">Activity Log</div>
+            <pre id="log-viewer" class="log-viewer">Loading...</pre>
+        </div>
+    </div>
+</div>
+
+
+<script src="/static/js/app.js"></script>
 </body>
 </html>
