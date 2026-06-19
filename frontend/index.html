@@ -21,6 +21,7 @@
     </div>
     <button id="btn-admin" class="header-btn hidden" onclick="showView('admin')">⚙️ Admin</button>
     <button id="btn-stations" class="header-btn" onclick="showView('stations')">📻 Stations</button>
+    <button id="btn-setup" class="header-btn" onclick="showView('setup')">🔧 Setup</button>
     <button id="btn-logout" class="header-btn danger" onclick="logout()">⏻ Logout</button>
 </header>
 
@@ -493,6 +494,159 @@
     </div>
 </div>
 
+
+<!-- ═══ Setup View ═══ -->
+<div id="view-setup" class="view">
+    <div class="setup-container">
+        <div class="panel">
+            <div class="panel-title">
+                🔧 Setup
+                <button onclick="showView('operator')" class="header-btn">← Back</button>
+            </div>
+
+            <div class="setup-tabs">
+                <button class="setup-tab-btn active" onclick="setupTab('radio', this)">📻 Radio</button>
+                <button class="setup-tab-btn" onclick="setupTab('audio', this)">🔊 Audio</button>
+                <button class="setup-tab-btn" onclick="setupTab('ptt', this)">🎤 PTT</button>
+                <button class="setup-tab-btn" onclick="setupTab('dsp', this)">🎵 DSP</button>
+            </div>
+
+            <!-- Radio Tab -->
+            <div class="setup-tab-content active" id="setup-radio">
+                <div class="setup-form-grid">
+                    <label>rigctld Host</label>
+                    <input type="text" id="setup-rigctld-host" value="127.0.0.1">
+                    <label>rigctld Port</label>
+                    <input type="number" id="setup-rigctld-port" value="4532">
+                    <label>Hamlib Model</label>
+                    <input type="text" id="setup-model" placeholder="e.g. 1038 (Yaesu FT-991)">
+                    <label>Serial Device</label>
+                    <input type="text" id="setup-device" value="/dev/ttyUSB0">
+                    <label>Baudrate</label>
+                    <select id="setup-baudrate">
+                        <option>4800</option>
+                        <option selected>9600</option>
+                        <option>19200</option>
+                        <option>38400</option>
+                        <option>57600</option>
+                        <option>115200</option>
+                    </select>
+                    <label>Data Bits</label>
+                    <select id="setup-databits"><option selected>8</option><option>7</option></select>
+                    <label>Stop Bits</label>
+                    <select id="setup-stopbits"><option selected>1</option><option>2</option></select>
+                    <label>Parity</label>
+                    <select id="setup-parity"><option selected>None</option><option>Even</option><option>Odd</option></select>
+                    <label>Flow Control</label>
+                    <select id="setup-flow"><option selected>None</option><option>Hardware</option><option>Software</option></select>
+                </div>
+                <div class="setup-actions">
+                    <button onclick="testRadioConnection()" class="setup-action">🔌 Test Connection</button>
+                    <button onclick="startRigctld()" class="setup-action">▶ Start rigctld</button>
+                    <button onclick="stopRigctld()" class="setup-action">■ Stop rigctld</button>
+                </div>
+                <div id="radio-test-result" class="setup-test-result"></div>
+            </div>
+
+            <!-- Audio Tab -->
+            <div class="setup-tab-content" id="setup-auto">
+                <div class="setup-form-grid">
+                    <label>RX Device</label>
+                    <select id="setup-rx-device"><option>default</option></select>
+                    <label>TX Device</label>
+                    <select id="setup-tx-device"><option>default</option></select>
+                    <label>Sample Rate</label>
+                    <select id="setup-sample-rate">
+                        <option value="8000">8000 Hz</option>
+                        <option value="16000">16000 Hz</option>
+                        <option value="48000" selected>48000 Hz</option>
+                    </select>
+                    <label>Channels</label>
+                    <select id="setup-channels"><option selected>1 (Mono)</option><option>2 (Stereo)</option></select>
+                    <label>Chunk Size (ms)</label>
+                    <input type="number" id="setup-chunk-ms" value="80" min="20" max="500">
+                </div>
+                <div class="setup-actions">
+                    <button onclick="scanAudio()" class="setup-action">🔍 Scan Devices</button>
+                    <button onclick="testRxAudio()" class="setup-action">🔊 Test RX</button>
+                    <button onclick="testTxAudio()" class="setup-action">🎤 Test TX</button>
+                </div>
+                <div id="audio-test-result" class="setup-test-result"></div>
+            </div>
+
+            <!-- PTT Tab -->
+            <div class="setup-tab-content" id="setup-ptt">
+                <div class="setup-form-grid">
+                    <label>PTT Method</label>
+                    <select id="setup-ptt-mode" onchange="togglePttSerial()">
+                        <option value="hamlib">Hamlib (CAT)</option>
+                        <option value="serial_rts">Serial RTS</option>
+                        <option value="serial_dtr">Serial DTR</option>
+                        <option value="vox">VOX (Audio)</option>
+                    </select>
+                    <label>PTT Serial Port</label>
+                    <input type="text" id="setup-ptt-port" placeholder="/dev/ttyUSB1 (if separate)" disabled>
+                    <label>TX Timeout (s)</label>
+                    <input type="number" id="setup-tx-timeout" value="180" min="10" max="600">
+                </div>
+                <div class="setup-actions">
+                    <button onclick="testPTT()" class="setup-action">🔴 Test PTT (2s)</button>
+                </div>
+                <div id="ptt-test-result" class="setup-test-result"></div>
+            </div>
+
+            <!-- DSP Tab -->
+            <div class="setup-tab-content" id="setup-dsp">
+                <div class="dsp-control">
+                    <input type="checkbox" id="setup-nr-enable">
+                    <label>Noise Reduction</label>
+                    <input type="range" id="setup-nr-strength" min="0" max="100" value="50">
+                    <span id="setup-nr-val">50%</span>
+                </div>
+                <div class="dsp-control">
+                    <input type="checkbox" id="setup-notch-enable">
+                    <label>Notch Filter</label>
+                    <select id="setup-notch-mode">
+                        <option value="auto">Auto-Notch</option>
+                        <option value="manual">Manual</option>
+                    </select>
+                    <label>Freq (Hz)</label>
+                    <input type="number" id="setup-notch-freq" value="1000" min="100" max="5000" disabled>
+                </div>
+                <div class="dsp-control">
+                    <input type="checkbox" id="setup-comp-enable">
+                    <label>TX Compressor</label>
+                    <input type="range" id="setup-comp-strength" min="0" max="100" value="30">
+                </div>
+                <div class="eq-section">
+                    <h4>Equalizer RX</h4>
+                    <div class="eq-row">
+                        <label>Bass</label>
+                        <input type="range" min="-12" max="12" value="0">
+                        <label>Mid</label>
+                        <input type="range" min="-12" max="12" value="0">
+                        <label>Treble</label>
+                        <input type="range" min="-12" max="12" value="0">
+                    </div>
+                    <h4>Equalizer TX</h4>
+                    <div class="eq-row">
+                        <label>Bass</label>
+                        <input type="range" min="-12" max="12" value="0">
+                        <label>Mid</label>
+                        <input type="range" min="-12" max="12" value="0">
+                        <label>Treble</label>
+                        <input type="range" min="-12" max="12" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-save-bar">
+                <button onclick="saveSetup()" class="setup-save-btn">💾 Save Configuration</button>
+                <button onclick="applySetup()" class="setup-apply-btn">⚡ Save & Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="/static/js/app.js"></script>
 </body>

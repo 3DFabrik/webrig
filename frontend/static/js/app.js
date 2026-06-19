@@ -621,6 +621,39 @@ function logout() {
     fetch('/logout', { method: 'GET' }).then(() => window.location.reload());
 }
 
+// ─── Setup ──────────────────────────────────────
+function setupTab(name, btn) {
+    document.querySelectorAll('.setup-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.setup-tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('setup-' + name).classList.add('active');
+}
+
+function togglePttSerial() {
+    const mode = document.getElementById('setup-ptt-mode').value;
+    document.getElementById('setup-ptt-port').disabled = (mode === 'hamlib' || mode === 'vox');
+}
+
+function testRadioConnection() {
+    const r = document.getElementById('radio-test-result');
+    r.textContent = 'Testing...';
+    r.className = 'setup-test-result';
+    // TODO: real API call
+    setTimeout(() => {
+        r.textContent = '⚠ Backend not connected yet';
+        r.className = 'setup-test-result fail';
+    }, 1000);
+}
+
+function startRigctld() {}
+function stopRigctld() {}
+function scanAudio() {}
+function testRxAudio() {}
+function testTxAudio() {}
+function testPTT() {}
+function saveSetup() {}
+function applySetup() {}
+
 // ─── Init ────────────────────────────────────────
 function init() {
     populateTones();
