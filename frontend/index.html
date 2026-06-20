@@ -19,6 +19,7 @@
     <div class="user-info">
         <span id="active-user"></span>
     </div>
+    <button id="btn-audio" class="header-btn" onclick="toggleAudio()" title="Toggle Audio"><span class="audio-icon">🔇</span></button>
     <button id="btn-admin" class="header-btn hidden" onclick="showView('admin')">⚙️ Admin</button>
     <button id="btn-stations" class="header-btn" onclick="showView('stations')">📻 Stations</button>
     <button id="btn-setup" class="header-btn" onclick="showView('setup')">🔧 Setup</button>
@@ -346,7 +347,10 @@
                 <label>Hamlib Model ID</label>
                 <input type="number" id="cfg-hamlib-model" placeholder="e.g. 1038">
                 <label>Serial Device</label>
-                <input type="text" id="cfg-serial-device" value="/dev/ttyUSB0">
+                <div style="display:flex;gap:4px">
+                    <select id="cfg-serial-device" style="flex:1"></select>
+                    <button onclick="scanSerialPorts()" class="admin-action" style="white-space:nowrap">🔍</button>
+                </div>
                 <label>Baudrate</label>
                 <input type="number" id="cfg-baudrate" value="9600">
                 <label>PTT Mode</label>
@@ -357,7 +361,7 @@
                     <option value="vox">VOX</option>
                 </select>
                 <label>PTT Serial Port</label>
-                <input type="text" id="cfg-ptt-port" placeholder="(if separate)">
+                <select id="cfg-ptt-port"><option value="">(same as serial)</option></select>
             </div>
             <button onclick="testRigctld()" class="admin-action">🔌 Test Connection</button>
             <button onclick="saveInterfaces()" class="admin-action">💾 Save</button>
@@ -526,7 +530,10 @@
                         <div id="model-search-results" class="model-search-results"></div>
                     </div>
                     <label>Serial Device</label>
-                    <input type="text" id="setup-device" value="/dev/ttyUSB0">
+                    <div style="display:flex;gap:4px">
+                        <select id="setup-device" style="flex:1"><option value="/dev/ttyUSB0">/dev/ttyUSB0</option></select>
+                        <button onclick="scanSerialPortsSetup()" class="setup-action" style="white-space:nowrap;padding:4px 8px">🔍</button>
+                    </div>
                     <label>Baudrate</label>
                     <select id="setup-baudrate">
                         <option>4800</option>
@@ -653,6 +660,8 @@
     </div>
 </div>
 
+<script src="/static/js/audio.js"></script>
+<script src="/static/js/tx_audio.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>

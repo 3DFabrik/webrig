@@ -19,6 +19,11 @@ from backend.utils.logging import setup_logging
 from backend.control.socketio_server import init_radio, sio
 import backend.control.socketio_server as _sio_mod
 from backend.radio.rigctld_manager import rigctld_mgr
+from backend.audio.rx_pipeline import RxPipeline
+from backend.audio.tx_pipeline import TxPipeline
+
+rx_audio = RxPipeline()
+tx_audio = TxPipeline()
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +35,17 @@ async def lifespan(app: FastAPI):
     load_config()
     setup_logging()
     logger.info("WebRig starting up")
+
+    # Initialize audio pipelines
+    rx_device = get("audio.device_rx", "default")
+    tx_device = get("audio.device_tx", "default")
+    rx_audio.device = rx_device
+    tx_audio.device = tx_device
+    rx_audio.squelch_enabled = get("audio.squelch_enabled", True)
+    rx_audio.squelch_threshold = get("audio.squelch_threshold", 300)
+    rx_audio.start(asyncio.get_event_loop())
+    tx_audio.start()
+    logger.info(f"Audio RX started (device={rx_device}), TX ready (device={tx_device})")
 
     # Initialize radio
     radio = init_radio()
@@ -45,6 +61,8 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down...")
+    rx_audio.stop()
+    tx_audio.stop()
     if radio:
         await radio.disconnect()
     logger.info("Goodbye!")
@@ -224,6 +242,69 @@ async def rigctld_stop():
         await _sio_mod.radio.disconnect()
     rigctld_mgr.stop()
     return {"status": "stopped"}
+
+
+# ─── Audio WebSocket Endpoints ────────────────────────────
+
+@app.websocket("/audio/rx")
+async def audio_rx_ws(websocket: WebSocket):
+    await websocket.accept()
+    logger.info("RX audio WebSocket client connected")
+    rx_audio.add_client(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.debug(f"RX audio WS error: {e}")
+    finally:
+        rx_audio.remove_client(websocket)
+        logger.info("RX audio WebSocket client disconnected")
+
+
+@app.websocket("/audio/tx")
+async def audio_tx_ws(websocket: WebSocket):
+    await websocket.accept()
+    logger.info("TX audio WebSocket client connected")
+    await tx_audio.add_client(websocket)
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            await tx_audio.handle_audio(websocket, data)
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.debug(f"TX audio WS error: {e}")
+    finally:
+        await tx_audio.remove_client(websocket)
+        logger.info("TX audio WebSocket client disconnected")
+
+
+@app.get("/api/serial/ports")
+async def serial_ports():
+    """List available serial ports."""
+    import glob
+    ports = []
+    # Common serial device patterns
+    for pattern in ["/dev/ttyUSB*", "/dev/ttyACM*", "/dev/ttyS*", "/dev/ttyAMA*"]:
+        for p in sorted(glob.glob(pattern)):
+            try:
+                import os
+                # Try to get device info via sysfs
+                basename = os.path.basename(p)
+                sysfs = f"/sys/class/tty/{basename}/device/../uevent"
+                desc = p
+                if os.path.exists(sysfs):
+                    with open(sysfs) as f:
+                        for line in f:
+                            if line.startswith("PRODUCT=") or line.startswith("HID_NAME="):
+                                desc = f"{p} ({line.strip().split('=',1)[1]})"
+                                break
+                ports.append({"device": p, "label": desc})
+            except Exception:
+                ports.append({"device": p, "label": p})
+    return {"ports": ports}
 
 
 @app.get("/api/audio/devices")
