@@ -122,7 +122,14 @@ class RadioManager:
                                        "mode": self.state.vfo_b_mode,
                                        "passband": self.state.vfo_b_passband})
 
+            # Send available preamp/att levels to frontend
+            await self._emit("rig_caps", {
+                "preamp_levels": self.client.get_preamp_levels(),
+                "att_levels": self.client.get_attenuator_levels(),
+            })
+
             # Read and emit secondary controls with capability checks
+            # Some radios support set but not get for certain levels (e.g. X6100 PREAMP/ATT)
             for feature, getter, emitter, ctrl_id in [
                 ("AGC", self.client.get_agc, lambda v: self._emit("agc", v), "agc-select"),
                 ("PREAMP", self.client.get_preamp, lambda v: self._emit("preamp", v), "preamp-btn"),
@@ -133,11 +140,10 @@ class RadioManager:
                         val = await getter()
                         await emitter(val)
                     else:
-                        await self._emit("capability_error", {
-                            "control": ctrl_id, "feature": feature})
+                        # Can set but not get — leave at default, frontend toggles locally
+                        log.info(f"{feature}: radio doesn't support readback, toggle-only")
                 except Exception:
-                    await self._emit("capability_error", {
-                        "control": ctrl_id, "feature": feature})
+                    log.debug(f"{feature}: capability check failed")
 
         except Exception as e:
             log.warning(f"Full poll error: {e}")

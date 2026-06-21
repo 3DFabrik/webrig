@@ -156,14 +156,30 @@ function connectSocket() {
         state.preamp = on;
         const btn = document.getElementById('preamp-btn');
         btn.classList.toggle('active', on);
-        btn.textContent = on ? 'ON' : 'OFF';
+        const db = btn.dataset.db || '10';
+        btn.textContent = on ? `${db}dB` : 'OFF';
     });
 
     socket.on('attenuator', (on) => {
         state.attenuator = on;
         const btn = document.getElementById('att-btn');
         btn.classList.toggle('active', on);
-        btn.textContent = on ? 'ON' : 'OFF';
+        const db = btn.dataset.db || '12';
+        btn.textContent = on ? `${db}dB` : 'OFF';
+    });
+
+    socket.on('rig_caps', (data) => {
+        // Radio capability info (preamp/att levels)
+        const preampBtn = document.getElementById('preamp-btn');
+        const attBtn = document.getElementById('att-btn');
+        if (data.preamp_levels && data.preamp_levels.length > 0 && preampBtn) {
+            preampBtn.dataset.db = data.preamp_levels[0];
+            preampBtn.title = `Preamp ${data.preamp_levels[0]} dB`;
+        }
+        if (data.att_levels && data.att_levels.length > 0 && attBtn) {
+            attBtn.dataset.db = data.att_levels[0];
+            attBtn.title = `Attenuator ${data.att_levels[0]} dB`;
+        }
     });
 
     socket.on('capability_error', (data) => {
@@ -661,7 +677,8 @@ function togglePreamp() {
     state.preamp = !state.preamp;
     const btn = document.getElementById('preamp-btn');
     btn.classList.toggle('active', state.preamp);
-    btn.textContent = state.preamp ? 'ON' : 'OFF';
+    const db = btn.dataset.db || '10';
+    btn.textContent = state.preamp ? `${db}dB` : 'OFF';
     if (socket) socket.emit('set_preamp', state.preamp);
 }
 
@@ -669,7 +686,8 @@ function toggleAtt() {
     state.attenuator = !state.attenuator;
     const btn = document.getElementById('att-btn');
     btn.classList.toggle('active', state.attenuator);
-    btn.textContent = state.attenuator ? 'ON' : 'OFF';
+    const db = btn.dataset.db || '12';
+    btn.textContent = state.attenuator ? `${db}dB` : 'OFF';
     if (socket) socket.emit('set_attenuator', state.attenuator);
 }
 

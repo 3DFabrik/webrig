@@ -307,8 +307,21 @@ class HamlibDirectClient:
     # ─── S-Meter ──────────────────────────────────────────────
 
     async def get_smeter(self) -> float:
-        """Get S-Meter in dB (relative to S9)."""
-        return await self.get_level_float("STRENGTH")
+        """Get S-Meter in dB (relative to S9).
+
+        STRENGTH is an integer level in hamlib (dB relative to S9),
+        so we use get_level_i, not get_level_f.
+        """
+        token = self._get_level_token("STRENGTH")
+        if token is None:
+            return 0.0
+
+        def _do():
+            try:
+                return float(self._rig.get_level_i(token))
+            except Exception:
+                return 0.0
+        return await self._run(_do)
 
     # ─── AGC ──────────────────────────────────────────────────
 
@@ -366,19 +379,43 @@ class HamlibDirectClient:
 
     # ─── Attenuator / Preamp ──────────────────────────────────
 
+    def get_preamp_levels(self) -> list:
+        """Return available preamp dB levels from caps (e.g. [10])."""
+        if self._rig is None:
+            return []
+        try:
+            return [p for p in self._rig.caps.preamp if p > 0]
+        except Exception:
+            return []
+
+    def get_attenuator_levels(self) -> list:
+        """Return available attenuator dB levels from caps (e.g. [12])."""
+        if self._rig is None:
+            return []
+        try:
+            return [a for a in self._rig.caps.attenuator if a > 0]
+        except Exception:
+            return []
+
     async def get_attenuator(self) -> bool:
         val = await self.get_level_int("ATT")
         return val > 0
 
     async def set_attenuator(self, on: bool) -> bool:
-        return await self.set_level("ATT", 1 if on else 0)
+        # Toggle between 0 (off) and first available attenuator level
+        levels = self.get_attenuator_levels()
+        val = levels[0] if levels and on else 0
+        return await self.set_level("ATT", val)
 
     async def get_preamp(self) -> bool:
         val = await self.get_level_int("PREAMP")
         return val > 0
 
     async def set_preamp(self, on: bool) -> bool:
-        return await self.set_level("PREAMP", 1 if on else 0)
+        # Toggle between 0 (off) and first available preamp level
+        levels = self.get_preamp_levels()
+        val = levels[0] if levels and on else 0
+        return await self.set_level("PREAMP", val)
 
     # ─── NB (Noise Blanker) ──────────────────────────────────
 
@@ -425,20 +462,22 @@ class HamlibDirectClient:
     def has_get_level(self, name: str) -> bool:
         """Check if the radio supports getting a level."""
         token = self._get_level_token(name)
-        if token is None:
+        if token is None or self._rig is None:
             return False
         try:
-            return bool(self._rig.has_get_level(token))
+            # Python binding has_get_level() returns None (broken SWIG),
+            # but caps.has_get_level bitfield works
+            return bool(self._rig.caps.has_get_level & token)
         except Exception:
             return False
 
     def has_set_level(self, name: str) -> bool:
         """Check if the radio supports setting a level."""
         token = self._get_level_token(name)
-        if token is None:
+        if token is None or self._rig is None:
             return False
         try:
-            return bool(self._rig.has_set_level(token))
+            return bool(self._rig.caps.has_set_level & token)
         except Exception:
             return False
 
