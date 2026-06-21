@@ -31,35 +31,45 @@
 
 <div class="op-layout">
 
-    <!-- ─── Left Column: VFO A + VFO B ─── -->
-    <div class="col-vfo">
+    <!-- ─── Left Column: VFO + Macros ─── -->
+    <div class="col-left">
+        <div class="panel vfo-panel">
+            <div class="panel-title">VFO Control</div>
 
-        <!-- VFO A (large, dominant) -->
-        <div class="vfo-large" id="vfo-a-box">
-            <div class="vfo-header">
-                <span class="vfo-name" id="vfo-a-label">VFO-A</span>
+            <div class="vfo-row">
+                <button class="vfo-select active" id="vfo-a-btn" onclick="selectVFO('VFOA')">VFO-A</button>
+                <button class="vfo-select" id="vfo-b-btn" onclick="selectVFO('VFOB')">VFO-B</button>
+                <button class="vfo-select small" onclick="vfoSwap()">A⇄B</button>
+                <button class="vfo-select small" onclick="vfoEqual()">A=B</button>
             </div>
 
-            <button class="tune-btn" data-vfo="A" data-dir="up">▲</button>
-            <div class="vfo-digits" id="vfo-a-digits"></div>
-            <button class="tune-btn" data-vfo="A" data-dir="down">▼</button>
+            <div class="vfo-display-row">
+                <div class="vfo-box active" id="vfo-a-box">
+                    <div class="vfo-label">VFO-A</div>
+                    <div class="vfo-freq" id="vfo-a-freq" onclick="editFreq('A')">---.----</div>
+                </div>
+                <div class="vfo-box" id="vfo-b-box">
+                    <div class="vfo-label">VFO-B</div>
+                    <div class="vfo-freq" id="vfo-b-freq" onclick="editFreq('B')">---.----</div>
+                </div>
+            </div>
+            <div class="freq-input-row" id="freq-input-row" style="display:none">
+                <input type="text" id="freq-input" class="freq-input"
+                       placeholder="7.074 or 7074000" inputmode="decimal">
+                <span class="freq-input-hint">Enter = OK · Esc = Abbr</span>
+            </div>
 
-            <div class="vfo-controls-row">
-                <select class="step-select" id="step-select-a">
-                    <option value="10">10 Hz</option>
-                    <option value="50">50 Hz</option>
-                    <option value="100">100 Hz</option>
-                    <option value="500">500 Hz</option>
-                    <option value="1000">1 kHz</option>
-                    <option value="5000">5 kHz</option>
-                    <option value="9000">9 kHz</option>
-                    <option value="10000" selected>10 kHz</option>
-                    <option value="12500">12.5 kHz</option>
-                    <option value="25000">25 kHz</option>
-                    <option value="100000">100 kHz</option>
-                    <option value="1000000">1 MHz</option>
-                </select>
-                <select class="mode-select" id="mode-select" onchange="setMode(this.value)">
+            <div class="freq-controls">
+                <div class="freq-step-label">Step:</div>
+                <button class="step-btn" data-step="10" onclick="tuneFreq(10000)">±10k</button>
+                <button class="step-btn" data-step="1" onclick="tuneFreq(1000)">±1k</button>
+                <button class="step-btn" data-step="0.1" onclick="tuneFreq(100)">±100</button>
+                <button class="step-btn" data-step="12.5" onclick="tuneFreq(12500)">±12.5k</button>
+            </div>
+
+            <div class="mode-row">
+                <label>Mode:</label>
+                <select id="mode-select" onchange="setMode(this.value)">
                     <option value="FM">FM</option>
                     <option value="USB">USB</option>
                     <option value="LSB">LSB</option>
@@ -69,56 +79,51 @@
                     <option value="DIGI">DIGI</option>
                 </select>
             </div>
-        </div>
 
-        <!-- VFO swap/equal buttons -->
-        <div class="vfo-swap-row">
-            <button class="vfo-select small" onclick="vfoSwap()">A⇄B</button>
-            <button class="vfo-select small" onclick="vfoEqual()">A=B</button>
-        </div>
-
-        <!-- VFO B (smaller) -->
-        <div class="vfo-small" id="vfo-b-box">
-            <div class="vfo-header">
-                <span class="vfo-name" id="vfo-b-label">VFO-B</span>
+            <div class="rptr-row">
+                <label>Shift:</label>
+                <select id="shift-select" onchange="setShift(this.value)">
+                    <option value="NONE">Simplex</option>
+                    <option value="+">+</option>
+                    <option value="-">-</option>
+                </select>
+                <label>Offset:</label>
+                <input type="text" id="offset-input" value="0.600" size="6" onchange="setOffset(this.value)"> MHz
             </div>
 
-            <button class="tune-btn small" data-vfo="B" data-dir="up">▲</button>
-            <div class="vfo-digits small" id="vfo-b-digits"></div>
-            <button class="tune-btn small" data-vfo="B" data-dir="down">▼</button>
-
-            <div class="vfo-controls-row">
-                <select class="step-select" id="step-select-b">
-                    <option value="10">10 Hz</option>
-                    <option value="50">50 Hz</option>
-                    <option value="100">100 Hz</option>
-                    <option value="500">500 Hz</option>
-                    <option value="1000">1 kHz</option>
-                    <option value="5000">5 kHz</option>
-                    <option value="9000">9 kHz</option>
-                    <option value="10000" selected>10 kHz</option>
-                    <option value="12500">12.5 kHz</option>
-                    <option value="25000">25 kHz</option>
-                    <option value="100000">100 kHz</option>
-                    <option value="1000000">1 MHz</option>
+            <div class="tone-row">
+                <label>Tone:</label>
+                <select id="ctcss-select" onchange="setCTCSS(this.value)">
+                    <option value="0">OFF</option>
+                </select>
+                <label>DCS:</label>
+                <select id="dcs-select" onchange="setDCS(this.value)">
+                    <option value="0">OFF</option>
                 </select>
             </div>
         </div>
 
-        <!-- Hidden freq input for backward compat with editFreq() -->
-        <div class="freq-input-row" id="freq-input-row" style="display:none">
-            <input type="text" id="freq-input" class="freq-input"
-                   placeholder="7.074 or 7074000" inputmode="decimal">
-            <span class="freq-input-hint">Enter = OK · Esc = Abbr</span>
+        <div class="panel macros-panel">
+            <div class="panel-title">Quick Macros</div>
+            <div id="macro-list" class="macro-list"></div>
+            <button class="macro-add" onclick="addMacro()">+ Add Macro</button>
         </div>
-
     </div>
 
-    <!-- ─── Center Column: Compact S-Meter ─── -->
-    <div class="col-smeter">
+    <!-- ─── Center Column: S-Meter + Stations ─── -->
+    <div class="col-center">
         <div class="panel smeter-panel">
-            <div class="panel-title">S-Meter</div>
+            <div class="panel-title">
+                <span class="smeter-scale-label">S-Meter</span>
+                <span class="smeter-controls">
+                    <button class="smeter-scale-btn active" onclick="setSmeterScale('S')">S-Units</button>
+                    <button class="smeter-scale-btn" onclick="setSmeterScale('DBM')">dBm</button>
+                    <button class="smeter-scale-btn" onclick="setSmeterScale('UV')">μV</button>
+                    <button class="smeter-scale-btn" onclick="setSmeterScale('RAW')">Raw</button>
+                </span>
+            </div>
 
+            <!-- Analog S-Meter Bar -->
             <div class="smeter-bar-container">
                 <div class="smeter-scale">
                     <span class="smark">S1</span>
@@ -136,24 +141,77 @@
                 </div>
             </div>
 
+            <!-- Digital Readout -->
             <div class="smeter-readout">
                 <span id="smeter-s-units">—</span>
                 <span id="smeter-dbm">—</span>
+                <span id="smeter-uv">—</span>
+                <span id="smeter-raw" class="debug">raw: —</span>
             </div>
 
+            <!-- Peak/Average Controls -->
             <div class="smeter-options">
+                <label>Peak Hold:</label>
+                <input type="range" id="peak-hold-time" min="0" max="10" value="3" step="1">
+                <span id="peak-hold-val">3s</span>
+                <span class="sep">│</span>
+                <label>Attack:</label>
+                <button class="attack-btn active" onclick="setAttack('fast')">Fast</button>
+                <button class="attack-btn" onclick="setAttack('slow')">Slow</button>
+                <span class="sep">│</span>
                 <label>Poll:</label>
                 <select id="poll-rate" onchange="setPollRate(this.value)">
-                    <option value="100">Fast</option>
-                    <option value="200" selected>Normal</option>
-                    <option value="500">Slow</option>
+                    <option value="100">Fast (100ms)</option>
+                    <option value="200" selected>Normal (200ms)</option>
+                    <option value="500">Slow (500ms)</option>
                 </select>
             </div>
+
+            <!-- Live Graph -->
+            <div class="smeter-graph-section">
+                <div class="graph-controls">
+                    <button onclick="toggleRecording()" id="record-btn">⏺ Record</button>
+                    <button onclick="exportRecording()">⬇ Export</button>
+                    <select id="graph-window" onchange="setGraphWindow(this.value)">
+                        <option value="5">5 min</option>
+                        <option value="30" selected>30 min</option>
+                        <option value="120">2 hours</option>
+                    </select>
+                </div>
+                <canvas id="smeter-graph" width="600" height="120"></canvas>
+            </div>
+
+            <!-- Alarm Section -->
+            <div class="smeter-alarms">
+                <div class="alarm-row">
+                    <input type="checkbox" id="alarm-threshold-enable">
+                    <label>Alarm bei S-Meter ≥</label>
+                    <select id="alarm-threshold">
+                        <option value="5">S5</option>
+                        <option value="7">S7</option>
+                        <option value="9">S9</option>
+                        <option value="11">S9+20</option>
+                    </select>
+                    <span class="sep">│</span>
+                    <input type="checkbox" id="alarm-delta-enable">
+                    <label>QSB-Detektor (Δ > </label>
+                    <input type="number" id="alarm-delta" value="10" size="3"> dB in
+                    <input type="number" id="alarm-delta-time" value="2" size="3">s)
+                </div>
+            </div>
+        </div>
+
+        <div class="panel stations-mini">
+            <div class="panel-title">
+                Stations
+                <input type="text" id="station-search" placeholder="Search..." oninput="filterStations(this.value)" class="station-search">
+            </div>
+            <div id="station-list-mini" class="station-list"></div>
         </div>
     </div>
 
-    <!-- ─── Right Column: Audio + TX ─── -->
-    <div class="col-audio-tx">
+    <!-- ─── Right Column: Audio + PTT ─── -->
+    <div class="col-right">
         <div class="panel audio-panel">
             <div class="panel-title">Audio</div>
 
