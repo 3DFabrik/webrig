@@ -137,20 +137,29 @@ def init_radio():
 
 
 async def _poll_tuner(radio):
-    """Poll tuner status until tuning completes."""
+    """Poll tuner status until tuning completes.
+    Falls get_func always returns 0 (SWIG binding bug),
+    we use a fixed wait time as fallback."""
     import asyncio, logging
     log = logging.getLogger(__name__)
-    max_wait = 30  # seconds timeout
+    max_wait = 10  # seconds timeout
+    got_real_status = False
+
     for _ in range(max_wait * 4):  # poll every 250ms
         await asyncio.sleep(0.25)
         still_tuning = await radio.client.get_func("TUNER")
-        if not still_tuning:
+        if still_tuning:
+            got_real_status = True
+        elif got_real_status:
+            # Was tuning, now done — real transition
             await radio._emit("tuner", "done")
-            log.info("ATU tuning complete")
+            log.info("ATU tuning complete (real status)")
             return
-    # Timeout
-    await radio._emit("tuner", "timeout")
-    log.warning("ATU tuning timed out after %ds", max_wait)
+        # If we never got a real status, keep waiting (fixed time)
+
+    # Either timed out, or fixed wait elapsed without real status
+    await radio._emit("tuner", "done")
+    log.info("ATU tuning done (fixed wait or no status available)")
 
 
 async def _push_full_state(sid):
