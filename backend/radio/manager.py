@@ -164,16 +164,21 @@ class RadioManager:
             await asyncio.sleep(self._smeter_interval)
 
     async def _state_loop(self):
-        """Slow loop: freq, mode, vfo, ptt."""
+        """Slow loop: freq, mode, vfo, ptt. Also monitors connection health."""
+        fail_count = 0
         while self._running:
             if not self.state.connected:
                 await asyncio.sleep(0.5)
                 continue
             try:
                 freq = await self.client.get_freq()
-                if freq != self.state.frequency:
-                    self.state.frequency = freq
-                    await self._emit("frequency", freq)
+                if freq > 0:  # 0 means read error
+                    fail_count = 0
+                    if freq != self.state.frequency:
+                        self.state.frequency = freq
+                        await self._emit("frequency", freq)
+                else:
+                    raise Exception("get_freq returned 0")
 
                 mode, pb = await self.client.get_mode()
                 if mode != self.state.mode or pb != self.state.passband:
@@ -187,8 +192,33 @@ class RadioManager:
                     await self._emit("ptt", ptt)
 
             except Exception as e:
-                log.debug(f"State poll error: {e}")
+                fail_count += 1
+                log.warning(f"State poll error ({fail_count}): {e}")
+                if fail_count >= 3:
+                    log.error("Radio connection lost")
+                    self.state.connected = False
+                    await self._emit("connection", False)
+                    await self._emit("radio_error", "Radio connection lost")
+                    # Try to reconnect
+                    asyncio.create_task(self._reconnect_loop())
             await asyncio.sleep(self._freq_interval)
+
+    async def _reconnect_loop(self):
+        """Attempt to reconnect to the radio every 3 seconds."""
+        while self._running and not self.state.connected:
+            await asyncio.sleep(3)
+            try:
+                log.info("Attempting radio reconnect...")
+                await self.client.disconnect()
+                ok = await self.client.connect()
+                if ok:
+                    log.info("Radio reconnected!")
+                    self.state.connected = True
+                    await self._emit("connection", True)
+                    await self._emit("radio_reconnected", {})
+                    await self._full_poll()
+            except Exception as e:
+                log.debug(f"Reconnect failed: {e}")
 
     # ─── Control methods ─────────────────────────────────────
 

@@ -178,8 +178,8 @@ body {
 /* Dual VFO display */
 .vfo-display-row {
     display: flex;
-    gap: 0.4em;
-    justify-content: center;
+    flex-direction: column;
+    gap: 0.5em;
     padding: 0.2em 0;
 }
 .vfo-box {
@@ -206,17 +206,19 @@ body {
     background: rgba(88, 166, 255, 0.12);
 }
 .vfo-label {
-    font-size: 0.6em;
+    font-size: 0.7em;
     color: var(--text-dim);
     letter-spacing: 0.1em;
-    margin-bottom: 0.1em;
+    margin-bottom: 0.2em;
 }
 .vfo-freq {
     font-family: var(--font-mono);
-    font-size: 1.1em;
+    font-size: 2.2em;
     font-weight: 700;
     color: var(--s1-color);
-    text-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
+    text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+    letter-spacing: 0.03em;
+    cursor: pointer;
 }
 .vfo-box:not(.active) .vfo-freq {
     color: var(--text-dim);
@@ -265,6 +267,24 @@ body {
 
 .freq-step-label { font-size: 0.75em; color: var(--text-dim); }
 
+/* Tune buttons */
+.tune-btn {
+    background: var(--bg-dark);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.3em 0.8em;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 700;
+    line-height: 1;
+    transition: all 0.1s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.tune-btn:hover { background: var(--accent); border-color: var(--accent); }
+.tune-btn:active { transform: scale(0.92); }
+
 .step-btn {
     background: var(--bg-dark);
     color: var(--text);
@@ -284,6 +304,71 @@ body {
     margin-top: 0.4em;
     font-size: 0.8em;
     flex-wrap: wrap;
+}
+
+/* Band buttons */
+.band-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    margin-top: 0.5em;
+    margin-bottom: 0.3em;
+    font-size: 0.8em;
+    flex-wrap: wrap;
+}
+
+.band-btn-group {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+}
+
+.band-btn {
+    background: var(--bg-dark);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 0.25em 0.5em;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    font-weight: 600;
+    transition: all 0.15s;
+    min-width: 2.5em;
+    text-align: center;
+}
+.band-btn:hover { border-color: var(--accent); color: var(--text); }
+.band-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(9, 105, 218, 0.4);
+}
+
+.mode-btn-group {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+}
+
+.mode-btn {
+    background: var(--bg-dark);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 0.3em 0.6em;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.15s;
+    min-width: 2.5em;
+    text-align: center;
+}
+.mode-btn:hover { border-color: var(--accent); color: var(--text); }
+.mode-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(9, 105, 218, 0.4);
 }
 
 .mode-row label, .rptr-row label, .tone-row label {
@@ -895,6 +980,30 @@ input[type="range"]::-webkit-slider-thumb {
 .model-item .model-name { font-weight: 500; }
 .model-item .model-id { color: var(--accent); font-family: var(--font-mono); font-size: 0.8em; }
 
+/* ═══ Radio Disconnected Overlay ═══ */
+#view-operator.radio-disconnected .op-layout {
+    opacity: 0.3;
+    pointer-events: none;
+    filter: grayscale(0.5);
+}
+#view-operator.radio-disconnected::after {
+    content: '⚠ Radio Disconnected — Trying to reconnect...';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-panel);
+    color: var(--red);
+    border: 2px solid var(--red);
+    padding: 1em 2em;
+    border-radius: 12px;
+    font-size: 1.2em;
+    font-weight: 700;
+    z-index: 1000;
+    box-shadow: 0 0 30px var(--red-glow);
+    pointer-events: none;
+}
+
 /* ═══ Scrollbar ═══ */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg-dark); }
@@ -907,7 +1016,7 @@ input[type="range"]::-webkit-slider-thumb {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto auto;
     }
-    .vfo-freq { font-size: 0.95em; }
+    .vfo-freq { font-size: 1.5em; }
     .freq-display { font-size: 1.3em; }
     #signal-footer { flex-wrap: wrap; gap: 0.5em; }
 }

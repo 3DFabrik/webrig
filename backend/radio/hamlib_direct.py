@@ -139,6 +139,11 @@ class HamlibDirectClient:
         def _do():
             try:
                 self._rig.set_freq(Hamlib.RIG_VFO_CURR, freq_hz)
+                # Verify the radio accepted the frequency
+                actual = int(self._rig.get_freq())
+                if actual != freq_hz:
+                    log.debug(f"set_freq rejected: sent {freq_hz}, got {actual}")
+                    return False
                 return True
             except Exception as e:
                 log.debug(f"set_freq error: {e}")

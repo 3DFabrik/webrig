@@ -83,7 +83,7 @@ function connectSocket() {
         } else {
             state.mode = data.mode;
         }
-        document.getElementById('mode-select').value = state.mode;
+        updateModeButtons();
     });
 
     socket.on('vfo', (vfo) => {
@@ -207,6 +207,9 @@ function setConnectionState(connected) {
         dot.className = 'status-dot disconnected';
         text.textContent = 'Disconnected';
     }
+    // Lock/unlock the operator view
+    const opView = document.getElementById('view-operator');
+    if (opView) opView.classList.toggle('radio-disconnected', !connected);
 }
 
 // ─── View Switching ──────────────────────────────
@@ -249,6 +252,7 @@ function updateFreqDisplay() {
         bEl.textContent = formatFreq(state.frequency);
     }
     updateVFOHighlight();
+    updateBandButtons(state.frequency);
 }
 
 function updateVFOHighlight() {
@@ -301,10 +305,83 @@ function tuneFreq(deltaHz) {
     if (socket) socket.emit('set_freq', state.frequency);
 }
 
+// ─── Step Tuning (dropdown + press-and-hold) ────
+let _tuneStep = 1000; // default 1 kHz
+let _tuneTimer = null;
+let _tuneInterval = null;
+
+function setStep(hz) {
+    _tuneStep = parseInt(hz) || 1000;
+}
+
+function tuneHold(dir) {
+    const delta = dir === 'up' ? _tuneStep : -_tuneStep;
+    tuneFreq(delta);
+    // Start repeat after 400ms hold
+    _tuneTimer = setTimeout(() => {
+        let speed = 200;
+        _tuneInterval = setInterval(() => {
+            tuneFreq(delta);
+            // Accelerate: speed up after every 5 ticks
+            speed = Math.max(50, speed - 10);
+        }, speed);
+    }, 400);
+}
+
+function tuneRelease() {
+    if (_tuneTimer) { clearTimeout(_tuneTimer); _tuneTimer = null; }
+    if (_tuneInterval) { clearInterval(_tuneInterval); _tuneInterval = null; }
+}
+
 // ─── Mode ────────────────────────────────────────
 function setMode(mode) {
     state.mode = mode;
+    updateModeButtons();
     if (socket) socket.emit('set_mode', mode);
+}
+
+function updateModeButtons() {
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === state.mode);
+    });
+}
+
+// ─── Band switching ─────────────────────────────
+const BAND_RANGES = [
+    { name: '2200m', min: 135700, max: 137800 },
+    { name: '630m', min: 472000, max: 479000 },
+    { name: '160m', min: 1800000, max: 2000000 },
+    { name: '80m', min: 3500000, max: 3800000 },
+    { name: '60m', min: 5250000, max: 5450000 },
+    { name: '40m', min: 7000000, max: 7200000 },
+    { name: '30m', min: 10100000, max: 10150000 },
+    { name: '20m', min: 14000000, max: 14350000 },
+    { name: '17m', min: 18068000, max: 18168000 },
+    { name: '15m', min: 21000000, max: 21450000 },
+    { name: '12m', min: 24890000, max: 24990000 },
+    { name: '10m', min: 28000000, max: 29700000 },
+    { name: '6m', min: 50000000, max: 54000000 },
+    { name: '4m', min: 70000000, max: 70500000 },
+    { name: '2m', min: 144000000, max: 146000000 },
+    { name: '70cm', min: 430000000, max: 440000000 },
+    { name: '23cm', min: 1240000000, max: 1300000000 },
+];
+
+function switchBand(btn) {
+    const freq = parseInt(btn.dataset.freq);
+    // Optimistic UI update
+    state.frequency = freq;
+    updateFreqDisplay();
+    // Tell backend — if radio rejects, next poll will correct the highlight
+    if (socket) socket.emit('set_freq', freq);
+}
+
+function updateBandButtons(freq) {
+    const band = BAND_RANGES.find(b => freq >= b.min && freq <= b.max);
+    document.querySelectorAll('.band-btn').forEach(btn => {
+        const isActive = band != null && btn.dataset.band === band.name;
+        btn.classList.toggle('active', isActive);
+    });
 }
 
 // ─── Shift / Offset / Tones ──────────────────────
@@ -737,7 +814,7 @@ function applyMacro(i) {
     state.frequency = m.freq;
     state.mode = m.mode;
     updateFreqDisplay();
-    document.getElementById('mode-select').value = m.mode;
+    updateModeButtons();
     if (socket) {
         socket.emit('set_freq', m.freq);
         socket.emit('set_mode', m.mode);
@@ -802,7 +879,7 @@ function applyStation(i) {
     state.frequency = s.freq;
     state.mode = s.mode || 'FM';
     updateFreqDisplay();
-    document.getElementById('mode-select').value = s.mode || 'FM';
+    updateModeButtons();
     if (socket) {
         socket.emit('set_freq', s.freq);
         socket.emit('set_mode', s.mode || 'FM');

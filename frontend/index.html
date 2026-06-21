@@ -61,23 +61,59 @@
 
             <div class="freq-controls">
                 <div class="freq-step-label">Step:</div>
-                <button class="step-btn" data-step="10" onclick="tuneFreq(10000)">±10k</button>
-                <button class="step-btn" data-step="1" onclick="tuneFreq(1000)">±1k</button>
-                <button class="step-btn" data-step="0.1" onclick="tuneFreq(100)">±100</button>
-                <button class="step-btn" data-step="12.5" onclick="tuneFreq(12500)">±12.5k</button>
+                <select id="step-select" onchange="setStep(this.value)">
+                    <option value="10">10 Hz</option>
+                    <option value="50">50 Hz</option>
+                    <option value="100">100 Hz</option>
+                    <option value="500">500 Hz</option>
+                    <option value="1000" selected>1 kHz</option>
+                    <option value="5000">5 kHz</option>
+                    <option value="9000">9 kHz</option>
+                    <option value="10000">10 kHz</option>
+                    <option value="12500">12.5 kHz</option>
+                    <option value="25000">25 kHz</option>
+                    <option value="100000">100 kHz</option>
+                    <option value="1000000">1 MHz</option>
+                </select>
+                <button class="tune-btn" data-dir="up" onmousedown="tuneHold('up')" onmouseup="tuneRelease()" onmouseleave="tuneRelease()" ontouchstart="tuneHold('up');event.preventDefault()" ontouchend="tuneRelease()">▲</button>
+                <button class="tune-btn" data-dir="down" onmousedown="tuneHold('down')" onmouseup="tuneRelease()" onmouseleave="tuneRelease()" ontouchstart="tuneHold('down');event.preventDefault()" ontouchend="tuneRelease()">▼</button>
+            </div>
+
+            <div class="band-row">
+                <label>Band:</label>
+                <div class="band-btn-group" id="band-btn-group">
+                    <button class="band-btn" data-band="2200m" data-freq="135700" onclick="switchBand(this)">2200m</button>
+                    <button class="band-btn" data-band="630m" data-freq="472000" onclick="switchBand(this)">630m</button>
+                    <button class="band-btn" data-band="160m" data-freq="1810000" onclick="switchBand(this)">160m</button>
+                    <button class="band-btn" data-band="80m" data-freq="3650000" onclick="switchBand(this)">80m</button>
+                    <button class="band-btn" data-band="60m" data-freq="5330000" onclick="switchBand(this)">60m</button>
+                    <button class="band-btn" data-band="40m" data-freq="7074000" onclick="switchBand(this)">40m</button>
+                    <button class="band-btn" data-band="30m" data-freq="10120000" onclick="switchBand(this)">30m</button>
+                    <button class="band-btn" data-band="20m" data-freq="14100000" onclick="switchBand(this)">20m</button>
+                    <button class="band-btn" data-band="17m" data-freq="18068000" onclick="switchBand(this)">17m</button>
+                    <button class="band-btn" data-band="15m" data-freq="21000000" onclick="switchBand(this)">15m</button>
+                    <button class="band-btn" data-band="12m" data-freq="24890000" onclick="switchBand(this)">12m</button>
+                    <button class="band-btn" data-band="10m" data-freq="28500000" onclick="switchBand(this)">10m</button>
+                    <button class="band-btn" data-band="6m" data-freq="50150000" onclick="switchBand(this)">6m</button>
+                    <button class="band-btn" data-band="4m" data-freq="70100000" onclick="switchBand(this)">4m</button>
+                    <button class="band-btn" data-band="2m" data-freq="145000000" onclick="switchBand(this)">2m</button>
+                    <button class="band-btn" data-band="70cm" data-freq="433000000" onclick="switchBand(this)">70cm</button>
+                    <button class="band-btn" data-band="23cm" data-freq="1291000000" onclick="switchBand(this)">23cm</button>
+                </div>
             </div>
 
             <div class="mode-row">
                 <label>Mode:</label>
-                <select id="mode-select" onchange="setMode(this.value)">
-                    <option value="FM">FM</option>
-                    <option value="USB">USB</option>
-                    <option value="LSB">LSB</option>
-                    <option value="AM">AM</option>
-                    <option value="CW">CW</option>
-                    <option value="RTTY">RTTY</option>
-                    <option value="DIGI">DIGI</option>
-                </select>
+                <div class="mode-btn-group" id="mode-btn-group">
+                    <button class="mode-btn" data-mode="FM" onclick="setMode('FM')">FM</button>
+                    <button class="mode-btn" data-mode="USB" onclick="setMode('USB')">USB</button>
+                    <button class="mode-btn" data-mode="LSB" onclick="setMode('LSB')">LSB</button>
+                    <button class="mode-btn" data-mode="AM" onclick="setMode('AM')">AM</button>
+                    <button class="mode-btn" data-mode="CW" onclick="setMode('CW')">CW</button>
+                    <button class="mode-btn" data-mode="RTTY" onclick="setMode('RTTY')">RTTY</button>
+                    <button class="mode-btn" data-mode="PKTUSB" onclick="setMode('PKTUSB')">DIG-U</button>
+                    <button class="mode-btn" data-mode="PKTLSB" onclick="setMode('PKTLSB')">DIG-L</button>
+                </div>
             </div>
 
             <div class="rptr-row">
