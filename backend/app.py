@@ -103,6 +103,8 @@ async def get_status():
         "ptt": s.ptt,
         "smeter_db": s.smeter_db,
         "split": s.split,
+        "vfo_a": {"freq": s.vfo_a_freq, "mode": s.vfo_a_mode, "passband": s.vfo_a_passband},
+        "vfo_b": {"freq": s.vfo_b_freq, "mode": s.vfo_b_mode, "passband": s.vfo_b_passband},
     }
 
 

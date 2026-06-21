@@ -161,17 +161,97 @@ body {
 
 .freq-display {
     font-family: var(--font-mono);
-    font-size: 2.4em;
+    font-size: 1.6em;
     font-weight: 700;
     text-align: center;
-    letter-spacing: 0.03em;
-    padding: 0.2em 0;
+    letter-spacing: 0.02em;
+    padding: 0.15em 0;
     color: var(--s1-color);
     text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2em;
 }
 
-.freq-digit { cursor: pointer; padding: 0 1px; }
-.freq-digit:hover { background: rgba(9, 105, 218, 0.3); border-radius: 3px; }
+/* Dual VFO display */
+.vfo-display-row {
+    display: flex;
+    gap: 0.4em;
+    justify-content: center;
+    padding: 0.2em 0;
+}
+.vfo-box {
+    flex: 1;
+    text-align: center;
+    padding: 0.2em 0.3em;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.vfo-box.active {
+    border-color: var(--accent);
+    background: rgba(88, 166, 255, 0.18);
+    box-shadow: 0 0 10px rgba(88, 166, 255, 0.35);
+}
+.vfo-box.active .vfo-label {
+    color: var(--accent);
+}
+.vfo-box:hover {
+    background: rgba(88, 166, 255, 0.05);
+}
+.vfo-box.active:hover {
+    background: rgba(88, 166, 255, 0.12);
+}
+.vfo-label {
+    font-size: 0.6em;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.1em;
+}
+.vfo-freq {
+    font-family: var(--font-mono);
+    font-size: 1.1em;
+    font-weight: 700;
+    color: var(--s1-color);
+    text-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
+}
+.vfo-box:not(.active) .vfo-freq {
+    color: var(--text-dim);
+    opacity: 0.5;
+    text-shadow: none;
+}
+.vfo-box:not(.active) .vfo-label {
+    opacity: 0.5;
+}
+
+.freq-input-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4em;
+    padding: 0.2em 0;
+}
+.freq-input-hint {
+    font-size: 0.6em;
+    color: var(--text-dim);
+}
+
+.freq-input {
+    font-family: var(--font-mono);
+    font-size: 1em;
+    font-weight: 700;
+    width: 5em;
+    text-align: center;
+    background: var(--bg-dark);
+    color: var(--s1-color);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 0.15em 0.3em;
+    outline: none;
+}
 .freq-sep { color: var(--text-dim); padding: 0 2px; }
 .freq-unit { font-size: 0.4em; color: var(--text-dim); margin-left: 0.3em; }
 
@@ -827,6 +907,7 @@ input[type="range"]::-webkit-slider-thumb {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto auto;
     }
-    .freq-display { font-size: 1.8em; }
+    .vfo-freq { font-size: 0.95em; }
+    .freq-display { font-size: 1.3em; }
     #signal-footer { flex-wrap: wrap; gap: 0.5em; }
 }

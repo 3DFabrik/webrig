@@ -122,3 +122,9 @@ async def _push_full_state(sid):
     await sio.emit("vfo", radio.state.vfo, to=sid)
     await sio.emit("ptt", radio.state.ptt, to=sid)
     await sio.emit("smeter", radio.state.smeter_db, to=sid)
+    await sio.emit("vfo_a", {"freq": radio.state.vfo_a_freq,
+                             "mode": radio.state.vfo_a_mode,
+                             "passband": radio.state.vfo_a_passband}, to=sid)
+    await sio.emit("vfo_b", {"freq": radio.state.vfo_b_freq,
+                             "mode": radio.state.vfo_b_mode,
+                             "passband": radio.state.vfo_b_passband}, to=sid)

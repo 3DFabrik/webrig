@@ -11,6 +11,8 @@ const state = {
     vfo: 'VFOA',
     split: false,
     selectedVFO: 'VFOA',
+    vfoA: { freq: 0, mode: 'FM', passband: 0 },
+    vfoB: { freq: 0, mode: 'FM', passband: 0 },
     smeterScale: 'S',
     attack: 'fast',
     recording: false,
@@ -85,10 +87,33 @@ function connectSocket() {
     });
 
     socket.on('vfo', (vfo) => {
+        // Ignore hamlib error responses (e.g. "RPRT -11")
+        if (!vfo || vfo.startsWith('RPRT')) return;
         state.vfo = vfo;
         state.selectedVFO = vfo;
-        document.getElementById('vfo-a-btn').classList.toggle('active', vfo === 'VFOA');
-        document.getElementById('vfo-b-btn').classList.toggle('active', vfo === 'VFOB');
+        document.getElementById('vfo-a-btn')?.classList.toggle('active', vfo === 'VFOA');
+        document.getElementById('vfo-b-btn')?.classList.toggle('active', vfo === 'VFOB');
+        updateVFOHighlight();
+    });
+
+    socket.on('vfo_a', (data) => {
+        state.vfoA = data;
+        document.getElementById('vfo-a-freq').textContent = formatFreq(data.freq);
+        if (state.selectedVFO === 'VFOA') {
+            state.frequency = data.freq;
+            state.mode = data.mode;
+            state.passband = data.passband;
+        }
+    });
+
+    socket.on('vfo_b', (data) => {
+        state.vfoB = data;
+        document.getElementById('vfo-b-freq').textContent = formatFreq(data.freq);
+        if (state.selectedVFO === 'VFOB') {
+            state.frequency = data.freq;
+            state.mode = data.mode;
+            state.passband = data.passband;
+        }
     });
 
     socket.on('ptt', (on) => {
@@ -135,8 +160,9 @@ function showView(name) {
 // ─── VFO ─────────────────────────────────────────
 function selectVFO(vfo) {
     state.selectedVFO = vfo;
-    document.getElementById('vfo-a-btn').classList.toggle('active', vfo === 'VFOA');
-    document.getElementById('vfo-b-btn').classList.toggle('active', vfo === 'VFOB');
+    document.getElementById('vfo-a-btn')?.classList.toggle('active', vfo === 'VFOA');
+    document.getElementById('vfo-b-btn')?.classList.toggle('active', vfo === 'VFOB');
+    updateVFOHighlight();
     if (socket) socket.emit('set_vfo', vfo);
 }
 
@@ -150,19 +176,64 @@ function vfoEqual() {
 
 // ─── Frequency ───────────────────────────────────
 function formatFreq(hz) {
-    return (hz / 1e6).toFixed(6);
+    if (!hz || hz < 0) return '---.----';
+    return (hz / 1e6).toFixed(4);
 }
 
 function updateFreqDisplay() {
-    const mhz = formatFreq(state.frequency);
-    const parts = mhz.split('.');
-    const intPart = parts[0].padStart(3, '0');
-    const decPart = (parts[1] || '').padEnd(6, '0');
-    const allDigits = (intPart + decPart).split('');
-    const digits = document.querySelectorAll('.freq-digit');
-    digits.forEach((d, i) => {
-        if (allDigits[i] !== undefined) d.textContent = allDigits[i];
-    });
+    const aEl = document.getElementById('vfo-a-freq');
+    const bEl = document.getElementById('vfo-b-freq');
+    if (!aEl) return;
+
+    if (state.selectedVFO === 'VFOA') {
+        aEl.textContent = formatFreq(state.frequency);
+    } else {
+        bEl.textContent = formatFreq(state.frequency);
+    }
+    updateVFOHighlight();
+}
+
+function updateVFOHighlight() {
+    document.getElementById('vfo-a-box')?.classList.toggle('active', state.selectedVFO === 'VFOA');
+    document.getElementById('vfo-b-box')?.classList.toggle('active', state.selectedVFO === 'VFOB');
+}
+
+function editFreq(which) {
+    const vfo = which || state.selectedVFO;
+    const row = document.getElementById('freq-input-row');
+    const input = document.getElementById('freq-input');
+    row.style.display = 'flex';
+    input.value = formatFreq(state.frequency);
+    input.focus();
+    input.select();
+    input.dataset.targetVFO = vfo;
+}
+
+function commitFreq() {
+    const input = document.getElementById('freq-input');
+    const row = document.getElementById('freq-input-row');
+    const raw = input.value.trim();
+    row.style.display = 'none';
+
+    if (!raw) return;
+
+    // Accept both "7.074" (MHz) and "7074000" (Hz) formats
+    let hz;
+    if (raw.includes('.') || raw.includes(',')) {
+        hz = Math.round(parseFloat(raw.replace(',', '.')) * 1e6);
+    } else {
+        hz = parseInt(raw, 10);
+    }
+
+    if (isNaN(hz) || hz < 0) return;
+
+    state.frequency = hz;
+    updateFreqDisplay();
+    if (socket) socket.emit('set_freq', hz);
+}
+
+function cancelFreq() {
+    document.getElementById('freq-input-row').style.display = 'none';
 }
 
 function tuneFreq(deltaHz) {
@@ -1119,6 +1190,20 @@ function init() {
     loadMacros();
     renderStations();
     updateFreqDisplay();
+
+    // Frequency input handlers
+    const freqInput = document.getElementById('freq-input');
+    if (freqInput) {
+        freqInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commitFreq(); }
+            else if (e.key === 'Escape') { e.preventDefault(); cancelFreq(); }
+        });
+        freqInput.addEventListener('blur', () => commitFreq());
+    }
+
+    // VFO box click = select VFO
+    document.getElementById('vfo-a-box')?.addEventListener('click', () => selectVFO('VFOA'));
+    document.getElementById('vfo-b-box')?.addEventListener('click', () => selectVFO('VFOB'));
 
     // Peak hold slider
     const peakSlider = document.getElementById('peak-hold-time');

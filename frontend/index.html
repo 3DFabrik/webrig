@@ -43,16 +43,20 @@
                 <button class="vfo-select small" onclick="vfoEqual()">A=B</button>
             </div>
 
-            <div class="freq-display" id="freq-display">
-                <span class="freq-digit" data-pos="0">1</span>
-                <span class="freq-digit" data-pos="1">4</span>
-                <span class="freq-digit" data-pos="2">5</span>
-                <span class="freq-sep">.</span>
-                <span class="freq-digit" data-pos="3">5</span>
-                <span class="freq-digit" data-pos="4">0</span>
-                <span class="freq-digit" data-pos="5">0</span>
-                <span class="freq-digit" data-pos="6">0</span>
-                <span class="freq-unit">MHz</span>
+            <div class="vfo-display-row">
+                <div class="vfo-box active" id="vfo-a-box">
+                    <div class="vfo-label">VFO-A</div>
+                    <div class="vfo-freq" id="vfo-a-freq" onclick="editFreq('A')">---.----</div>
+                </div>
+                <div class="vfo-box" id="vfo-b-box">
+                    <div class="vfo-label">VFO-B</div>
+                    <div class="vfo-freq" id="vfo-b-freq" onclick="editFreq('B')">---.----</div>
+                </div>
+            </div>
+            <div class="freq-input-row" id="freq-input-row" style="display:none">
+                <input type="text" id="freq-input" class="freq-input"
+                       placeholder="7.074 or 7074000" inputmode="decimal">
+                <span class="freq-input-hint">Enter = OK · Esc = Abbr</span>
             </div>
 
             <div class="freq-controls">

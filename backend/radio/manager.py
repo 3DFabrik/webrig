@@ -39,6 +39,13 @@ class RadioState:
         self.nb = 0.0
         self.attenuator = False
         self.preamp = False
+        # Per-VFO state
+        self.vfo_a_freq = 0
+        self.vfo_a_mode = "FM"
+        self.vfo_a_passband = 0
+        self.vfo_b_freq = 0
+        self.vfo_b_mode = "FM"
+        self.vfo_b_passband = 0
 
 
 class RadioManager:
@@ -84,11 +91,34 @@ class RadioManager:
         await self._emit("connection", False)
 
     async def _full_poll(self):
-        """Poll all state values once."""
+        """Poll all state values once, including both VFOs."""
         try:
             self.state.frequency = await self.client.get_freq()
             self.state.mode, self.state.passband = await self.client.get_mode()
             self.state.vfo = await self.client.get_vfo()
+
+            # Read both VFOs explicitly
+            try:
+                self.state.vfo_a_freq = await self.client.get_freq_vfo("VFOA")
+                self.state.vfo_a_mode, self.state.vfo_a_passband = await self.client.get_mode_vfo("VFOA")
+            except Exception:
+                self.state.vfo_a_freq = self.state.frequency
+                self.state.vfo_a_mode = self.state.mode
+                self.state.vfo_a_passband = self.state.passband
+
+            try:
+                self.state.vfo_b_freq = await self.client.get_freq_vfo("VFOB")
+                self.state.vfo_b_mode, self.state.vfo_b_passband = await self.client.get_mode_vfo("VFOB")
+            except Exception:
+                pass  # VFO B may not be available
+
+            # Emit both VFO states
+            await self._emit("vfo_a", {"freq": self.state.vfo_a_freq,
+                                       "mode": self.state.vfo_a_mode,
+                                       "passband": self.state.vfo_a_passband})
+            await self._emit("vfo_b", {"freq": self.state.vfo_b_freq,
+                                       "mode": self.state.vfo_b_mode,
+                                       "passband": self.state.vfo_b_passband})
         except Exception as e:
             log.warning(f"Full poll error: {e}")
 

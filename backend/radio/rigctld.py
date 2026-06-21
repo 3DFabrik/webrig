@@ -115,6 +115,37 @@ class RigctldClient:
         resp = await self._send(f"\\set_vfo {vfo}")
         return resp == "RPRT 0"
 
+    async def get_freq_vfo(self, vfo: str) -> int:
+        """Get frequency for a specific VFO.
+
+        rigctld returns the value followed by 'RPRT <code>'.
+        """
+        resp = await self._send(f"\\get_freq {vfo}", n_lines=2)
+        for line in resp.split("\n"):
+            line = line.strip()
+            if line and not line.startswith("RPRT"):
+                try:
+                    return int(line)
+                except ValueError:
+                    pass
+        return 0
+
+    async def get_mode_vfo(self, vfo: str) -> tuple[str, int]:
+        """Get mode and passband for a specific VFO.
+
+        rigctld returns mode, passband, then 'RPRT <code>'.
+        """
+        resp = await self._send(f"\\get_mode {vfo}", n_lines=3)
+        lines = [l.strip() for l in resp.split("\n") if l.strip() and not l.strip().startswith("RPRT")]
+        if len(lines) >= 2:
+            try:
+                return lines[0], int(lines[1])
+            except ValueError:
+                return lines[0], 0
+        elif len(lines) == 1:
+            return lines[0], 0
+        return "FM", 0
+
     async def get_ptt(self) -> bool:
         """Get PTT status. Returns True if transmitting."""
         resp = await self._send("\\get_ptt")
