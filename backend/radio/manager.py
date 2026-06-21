@@ -148,6 +148,9 @@ class RadioManager:
             await self._emit("frequency", freq_hz)
 
     async def set_mode(self, mode: str, passband: int = 0):
+        # Keep current passband if none specified (hamlib requires it)
+        if passband <= 0:
+            passband = self.state.passband
         if await self.client.set_mode(mode, passband):
             self.state.mode = mode
             self.state.passband = passband

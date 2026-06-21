@@ -49,10 +49,9 @@ class RigctldClient:
     async def _send(self, command: str, n_lines: int = 1) -> str:
         """Send raw command and return response (1 line by default).
 
-        Some rigctld commands return multiple lines (e.g. \get_mode
+        Some rigctld commands return multiple lines (e.g. \\get_mode
         returns mode + passband on separate lines). Use n_lines to read
-        them all. A trailing 'RPRT 0' line on set commands is consumed
-        automatically and not counted.
+        them all.
         """
         if not self.connected or not self._writer:
             raise ConnectionError("rigctld not connected")
