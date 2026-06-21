@@ -602,6 +602,7 @@ function setSQL(val) {
 }
 function setMicGain(val) {
     document.getElementById('mic-val').textContent = val + '%';
+    if (socket) socket.emit('set_micgain', val / 100);
 }
 
 // ─── Signal Processing ───────────────────────────

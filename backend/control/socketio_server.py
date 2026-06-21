@@ -75,6 +75,10 @@ def init_radio():
     async def on_set_af(sid, gain):
         await radio.set_af(float(gain))
 
+    @sio.on("set_micgain")
+    async def on_set_micgain(sid, gain):
+        await radio.client.set_micgain(float(gain))
+
     @sio.on("set_rf")
     async def on_set_rf(sid, gain):
         await radio.set_rf(float(gain))

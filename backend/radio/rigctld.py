@@ -245,6 +245,15 @@ class RigctldClient:
         resp = await self._send(f"\\set_level AF {gain}")
         return resp == "RPRT 0"
 
+    async def get_micgain(self) -> float:
+        """Get mic gain (0.0-1.0)."""
+        return await self.get_level("MICGAIN")
+
+    async def set_micgain(self, gain: float) -> bool:
+        """Set mic gain (0.0-1.0)."""
+        resp = await self._send(f"\\set_level MICGAIN {gain}")
+        return resp == "RPRT 0"
+
     async def get_rf(self) -> float:
         """Get RF gain."""
         return await self.get_level("RF")
