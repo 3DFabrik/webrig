@@ -46,22 +46,35 @@ class RigctldClient:
         self._reader = None
         self._writer = None
 
-    async def _send(self, command: str) -> str:
-        """Send raw command and return response line."""
+    async def _send(self, command: str, n_lines: int = 1) -> str:
+        """Send raw command and return response (1 line by default).
+
+        Some rigctld commands return multiple lines (e.g. \get_mode
+        returns mode + passband on separate lines). Use n_lines to read
+        them all. A trailing 'RPRT 0' line on set commands is consumed
+        automatically and not counted.
+        """
         if not self.connected or not self._writer:
             raise ConnectionError("rigctld not connected")
         async with self._lock:
             self._writer.write((command + "\n").encode())
             await self._writer.drain()
-            response = await self._reader.readline()
-            return response.decode().strip()
+            lines = []
+            for _ in range(n_lines):
+                raw = await self._reader.readline()
+                lines.append(raw.decode().strip())
+            return "\n".join(lines) if n_lines > 1 else (lines[0] if lines else "")
 
     # ─── High-level commands ──────────────────────────────────────
 
     async def get_freq(self) -> int:
         """Get current VFO frequency in Hz."""
         resp = await self._send("\\get_freq")
-        return int(resp) if resp else 0
+        try:
+            return int(resp)
+        except (ValueError, TypeError):
+            log.warning(f"get_freq unexpected response: {resp!r}")
+            return 0
 
     async def set_freq(self, freq_hz: int) -> bool:
         """Set VFO frequency."""
@@ -69,11 +82,21 @@ class RigctldClient:
         return resp == "RPRT 0"
 
     async def get_mode(self) -> tuple[str, int]:
-        """Get current mode and passband. Returns (mode, bandwidth_hz)."""
-        resp = await self._send("\\get_mode")
-        parts = resp.split()
-        if len(parts) >= 2:
-            return parts[0], int(parts[1])
+        """Get current mode and passband. Returns (mode, bandwidth_hz).
+
+        rigctld returns two lines: mode, then passband.
+        """
+        resp = await self._send("\\get_mode", n_lines=2)
+        lines = resp.split("\n")
+        if len(lines) >= 2:
+            mode = lines[0].strip()
+            try:
+                passband = int(lines[1].strip())
+            except ValueError:
+                passband = 0
+            return mode, passband
+        elif len(lines) == 1 and lines[0]:
+            return lines[0].strip(), 0
         return "FM", 0
 
     async def set_mode(self, mode: str, passband: int = 0) -> bool:

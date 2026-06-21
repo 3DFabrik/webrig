@@ -92,8 +92,21 @@ class RigctldManager:
         self.process = None
 
     def test_connection(self, model: int, device: str, baudrate: int = 9600) -> dict:
-        """Test a rigctld connection without keeping it running."""
-        # Start temporary rigctld on a test port
+        """Test a rigctld connection without keeping it running.
+
+        Stops any running rigctld first to free the serial port,
+        then starts a temporary instance on a test port, polls until
+        it's ready (or fails), and cleans up afterwards.
+        """
+        import time
+        import socket
+
+        # Stop the managed rigctld so the serial port is free
+        was_running = self.is_running()
+        self.stop()
+        if was_running:
+            time.sleep(0.5)  # let the kernel release the tty
+
         test_port = 4599
         args = [
             "rigctld", "-m", str(model), "-r", device,
@@ -104,15 +117,28 @@ class RigctldManager:
                 args, stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE, preexec_fn=os.setsid,
             )
-            import time
-            time.sleep(1)
 
-            if proc.poll() is not None:
-                stderr = proc.stderr.read().decode()
-                return {"ok": False, "error": f"rigctld exited: {stderr.strip()}"}
+            # Poll for the listener socket (max ~6 s)
+            ready = False
+            for _ in range(30):
+                if proc.poll() is not None:
+                    stderr = proc.stderr.read().decode()
+                    return {"ok": False, "error": f"rigctld exited: {stderr.strip()}"}
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                    probe.settimeout(0.3)
+                    try:
+                        probe.connect(("127.0.0.1", test_port))
+                        ready = True
+                        break
+                    except (ConnectionRefusedError, OSError):
+                        pass
+                time.sleep(0.2)
 
-            # Try to connect and get info
-            import socket
+            if not ready:
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                return {"ok": False, "error": "rigctld did not start listening (timeout)"}
+
+            # Query rig info
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.settimeout(3)
@@ -120,15 +146,15 @@ class RigctldManager:
                 s.sendall(b"\\get_info\n")
                 resp = s.recv(4096).decode().strip()
                 s.close()
-
-                # Kill the test process
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                proc.wait(timeout=3)
-
                 return {"ok": True, "info": resp}
             except Exception as e:
+                return {"ok": False, "error": f"Connected but query failed: {e}"}
+            finally:
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                return {"ok": False, "error": f"Cannot connect: {e}"}
+                try:
+                    proc.wait(timeout=3)
+                except Exception:
+                    pass
 
         except FileNotFoundError:
             return {"ok": False, "error": "rigctld not installed"}
