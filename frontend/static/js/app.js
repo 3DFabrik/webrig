@@ -68,7 +68,20 @@ function connectSocket() {
         setConnectionState(false);
     });
 
-    socket.on('connection', (connected) => {
+    // ─── Tuner ──────────────────────────────────────
+function toggleTuner() {
+    state.tuner = !state.tuner;
+    const btn = document.getElementById('tuner-btn');
+    btn.classList.toggle('active', state.tuner);
+    if (socket) socket.emit('set_tuner', state.tuner);
+}
+
+socket.on('tuner', (on) => {
+    state.tuner = on;
+    document.getElementById('tuner-btn')?.classList.toggle('active', on);
+});
+
+socket.on('connection', (connected) => {
         setConnectionState(connected);
     });
 

@@ -110,6 +110,11 @@ def init_radio():
         else:
             await radio.set_attenuator(bool(data))
 
+    @sio.on("set_tuner")
+    async def on_set_tuner(sid, on):
+        ok = await radio.client.set_func("TUNER", bool(on))
+        await radio._emit("tuner", bool(on) if ok else False)
+
     @sio.on("set_poll_rate")
     async def on_set_poll_rate(sid, ms):
         radio._smeter_interval = int(ms) / 1000
