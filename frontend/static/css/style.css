@@ -601,8 +601,8 @@ input[type="range"]::-webkit-slider-thumb {
     margin-bottom: 0.5em;
     font-size: 0.8em;
 }
-.audio-control label { min-width: 50px; color: var(--text-dim); }
-.audio-control input[type="range"] { flex: 1; }
+.audio-control label { min-width: 45px; color: var(--text-dim); flex-shrink: 0; }
+.audio-control input[type="range"] { flex: 1; max-width: 120px; }
 
 .audio-meters { margin-top: 0.5em; }
 .meter-row {
@@ -639,8 +639,8 @@ input[type="range"]::-webkit-slider-thumb {
     margin-bottom: 0.5em;
     font-size: 0.8em;
 }
-.mic-control label { min-width: 50px; color: var(--text-dim); }
-.mic-control input[type="range"] { flex: 1; }
+.mic-control label { min-width: 45px; color: var(--text-dim); flex-shrink: 0; }
+.mic-control input[type="range"] { flex: 1; max-width: 120px; }
 
 .tx-led {
     text-align: center;
