@@ -70,15 +70,41 @@ function connectSocket() {
 
     // ─── Tuner ──────────────────────────────────────
 function toggleTuner() {
-    state.tuner = !state.tuner;
-    const btn = document.getElementById('tuner-btn');
-    btn.classList.toggle('active', state.tuner);
-    if (socket) socket.emit('set_tuner', state.tuner);
+    if (state.tuner === 'tuning') return; // ignore press while tuning
+    if (state.tuner === 'off' || !state.tuner) {
+        state.tuner = 'tuning';
+        const btn = document.getElementById('tuner-btn');
+        btn.classList.add('tuning');
+        btn.classList.remove('active');
+        btn.textContent = 'Tuning...';
+        if (socket) socket.emit('set_tuner', true);
+    }
 }
 
-socket.on('tuner', (on) => {
-    state.tuner = on;
-    document.getElementById('tuner-btn')?.classList.toggle('active', on);
+socket.on('tuner', (status) => {
+    state.tuner = status;
+    const btn = document.getElementById('tuner-btn');
+    if (!btn) return;
+    btn.classList.remove('active', 'tuning');
+    if (status === 'tuning') {
+        btn.classList.add('tuning');
+        btn.textContent = 'Tuning...';
+    } else if (status === 'done') {
+        btn.textContent = 'ATU';
+        btn.classList.add('active');
+        setTimeout(() => {
+            btn.classList.remove('active');
+            state.tuner = 'off';
+        }, 3000);
+    } else if (status === 'timeout') {
+        btn.textContent = 'ATU Timeout';
+        setTimeout(() => {
+            btn.textContent = 'ATU';
+            state.tuner = 'off';
+        }, 3000);
+    } else {
+        btn.textContent = 'ATU';
+    }
 });
 
 socket.on('connection', (connected) => {

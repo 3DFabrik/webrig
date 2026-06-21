@@ -112,8 +112,15 @@ def init_radio():
 
     @sio.on("set_tuner")
     async def on_set_tuner(sid, on):
-        ok = await radio.client.set_func("TUNER", bool(on))
-        await radio._emit("tuner", bool(on) if ok else False)
+        if on:
+            # Start tuning
+            await radio.client.set_func("TUNER", True)
+            await radio._emit("tuner", "tuning")
+            # Poll tuning status until done
+            asyncio.create_task(_poll_tuner(radio))
+        else:
+            await radio.client.set_func("TUNER", False)
+            await radio._emit("tuner", "off")
 
     @sio.on("set_poll_rate")
     async def on_set_poll_rate(sid, ms):
@@ -127,6 +134,23 @@ def init_radio():
     radio.on_change(on_radio_change)
 
     return radio
+
+
+async def _poll_tuner(radio):
+    """Poll tuner status until tuning completes."""
+    import asyncio, logging
+    log = logging.getLogger(__name__)
+    max_wait = 30  # seconds timeout
+    for _ in range(max_wait * 4):  # poll every 250ms
+        await asyncio.sleep(0.25)
+        still_tuning = await radio.client.get_func("TUNER")
+        if not still_tuning:
+            await radio._emit("tuner", "done")
+            log.info("ATU tuning complete")
+            return
+    # Timeout
+    await radio._emit("tuner", "timeout")
+    log.warning("ATU tuning timed out after %ds", max_wait)
 
 
 async def _push_full_state(sid):
