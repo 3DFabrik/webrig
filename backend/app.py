@@ -18,7 +18,6 @@ from backend.config import load_config, get
 from backend.utils.logging import setup_logging
 from backend.control.socketio_server import init_radio, sio
 import backend.control.socketio_server as _sio_mod
-from backend.radio.rigctld_manager import rigctld_mgr
 from backend.audio.rx_pipeline import RxPipeline
 from backend.audio.tx_pipeline import TxPipeline
 
@@ -52,7 +51,7 @@ async def lifespan(app: FastAPI):
     try:
         connected = await radio.connect()
         if connected:
-            logger.info("Radio connected via rigctld")
+            logger.info("Radio connected")
         else:
             logger.warning("Radio not available — running without radio")
     except Exception as e:
@@ -175,7 +174,7 @@ async def save_config(request: Request):
 
 @app.post("/api/config/apply")
 async def apply_config(request: Request):
-    """Save config, restart rigctld, reconnect radio."""
+    """Save config, reconnect radio with new settings."""
     import yaml
     body = await request.json()
 
@@ -186,82 +185,40 @@ async def apply_config(request: Request):
     # Reload config in memory
     load_config()
 
-    radio_cfg = body.get("radio", {})
-    model = int(radio_cfg.get("model", 1))
-    device = radio_cfg.get("device", "/dev/ttyUSB0")
-    baudrate = int(radio_cfg.get("baudrate", 9600))
-    host = radio_cfg.get("rigctld_host", "127.0.0.1")
-    port = int(radio_cfg.get("rigctld_port", 4532))
-    data_bits = int(radio_cfg.get("data_bits", 8))
-    stop_bits = int(radio_cfg.get("stop_bits", 1))
-    parity = radio_cfg.get("parity", "None")
-    flow = radio_cfg.get("flow_control", "None")
-
-    # Stop existing rigctld + radio
+    # Disconnect existing radio
     if _sio_mod.radio:
         await _sio_mod.radio.disconnect()
-    rigctld_mgr.stop()
 
-    # Start rigctld with new params
-    started = rigctld_mgr.start(model, device, baudrate, host, port,
-                                 data_bits, stop_bits, parity, flow)
-    if not started:
-        return {"status": "error", "error": "Failed to start rigctld"}
+    # Reconnect with new config
+    from backend.radio.manager import RadioManager
+    radio = RadioManager()
+    _sio_mod.radio = radio
+    # Wire up events
+    async def on_radio_change(event, value):
+        await sio.emit(event, value)
+    radio.on_change(on_radio_change)
 
-    # Reconnect radio manager
-    import time
-    time.sleep(0.5)
-    if _sio_mod.radio:
-        ok = await _sio_mod.radio.connect()
-        return {"status": "ok" if ok else "error",
-                "radio": "connected" if ok else "failed to connect"}
-
-    return {"status": "ok", "radio": "rigctld started"}
+    ok = await radio.connect()
+    return {"status": "ok" if ok else "error",
+            "radio": "connected" if ok else "failed to connect"}
 
 
-@app.post("/api/rigctld/test")
-async def test_rigctld(request: Request):
-    """Test rigctld connection with given params without saving.
-
-    The test stops the running rigctld; the manager restarts it
-    automatically afterwards. We also reconnect the radio manager
-    so the frontend resumes receiving data.
-    """
+@app.post("/api/radio/test")
+async def test_radio(request: Request):
+    """Test radio connection with given params without saving."""
+    from backend.radio.hamlib_direct import HamlibDirectClient
     body = await request.json()
-    result = rigctld_mgr.test_connection(
-        model=int(body.get("model", 1)),
-        device=body.get("device", "/dev/ttyUSB0"),
-        baudrate=int(body.get("baudrate", 9600)),
-    )
+    model = int(body.get("model_id", body.get("model", 1)))
+    device = body.get("serial_port", body.get("device", "/dev/ttyUSB0"))
+    baud = int(body.get("serial_baud", body.get("baudrate", 9600)))
 
-    # Give rigctld a moment to come back up, then reconnect radio manager
-    if rigctld_mgr.is_running():
-        import asyncio as _aio
-        await _aio.sleep(1.0)
-        if _sio_mod.radio and not _sio_mod.radio.client.connected:
-            try:
-                await _sio_mod.radio.disconnect()
-                await _sio_mod.radio.connect()
-                logger.info("Radio manager reconnected after test")
-            except Exception as e:
-                logger.warning(f"Radio manager reconnect failed: {e}")
-
-    return result
-
-
-@app.get("/api/rigctld/status")
-async def rigctld_status():
-    """Check if rigctld is running."""
-    return {"running": rigctld_mgr.is_running()}
-
-
-@app.post("/api/rigctld/stop")
-async def rigctld_stop():
-    """Stop rigctld."""
-    if _sio_mod.radio:
-        await _sio_mod.radio.disconnect()
-    rigctld_mgr.stop()
-    return {"status": "stopped"}
+    client = HamlibDirectClient(model=model, port=device, baud=baud)
+    ok = await client.connect()
+    if ok:
+        info = f"Connected to {client._rig.caps.mfg_name} {client._rig.caps.model_name}"
+        await client.disconnect()
+        return {"ok": True, "info": info}
+    return {"ok": False, "error": "Connection failed"}
 
 
 # ─── Audio WebSocket Endpoints ────────────────────────────

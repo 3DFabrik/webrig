@@ -2,11 +2,13 @@
 # Copy to config.local.yaml and adjust for your setup.
 
 radio:
-  rigctld_host: "127.0.0.1"
-  rigctld_port: 4532
+  # Direct hamlib (no rigctld needed)
+  model_id: 3087                # hamlib model number (3087=Xiegu X6100)
+  serial_port: "/dev/ttyACM1"
+  serial_baud: 19200
   poll_interval_ms: 200          # S-Meter polling interval
   freq_poll_interval_ms: 1000    # Frequency/mode polling interval
-  reconnect_delay_s: 3           # retry delay if rigctld unreachable
+  reconnect_delay_s: 3           # retry delay if radio unreachable
 
 audio:
   sample_rate: 8000

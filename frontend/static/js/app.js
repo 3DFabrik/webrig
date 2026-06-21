@@ -147,13 +147,41 @@ function connectSocket() {
         btn.classList.toggle('active', on);
         btn.textContent = on ? 'ON' : 'OFF';
     });
+
+    socket.on('agc', (value) => {
+        updateAGCSelect(value);
+    });
+
+    socket.on('preamp', (on) => {
+        state.preamp = on;
+        const btn = document.getElementById('preamp-btn');
+        btn.classList.toggle('active', on);
+        btn.textContent = on ? 'ON' : 'OFF';
+    });
+
+    socket.on('attenuator', (on) => {
+        state.attenuator = on;
+        const btn = document.getElementById('att-btn');
+        btn.classList.toggle('active', on);
+        btn.textContent = on ? 'ON' : 'OFF';
+    });
+
+    socket.on('capability_error', (data) => {
+        // Disable controls the radio doesn't support
+        const el = document.getElementById(data.control);
+        if (el) {
+            el.disabled = true;
+            el.style.opacity = '0.4';
+            el.title = `Not supported by radio: ${data.feature}`;
+        }
+    });
 }
 
 // ─── Connection State ─────────────────────────────
 function setConnectionState(connected) {
     state.connected = connected;
-    const dot = document.getElementById('rigctld-status');
-    const text = document.getElementById('rigctld-status-text');
+    const dot = document.getElementById('radio-status');
+    const text = document.getElementById('radio-status-text');
     if (connected) {
         dot.className = 'status-dot connected';
         text.textContent = 'Connected';
@@ -606,7 +634,27 @@ function setMicGain(val) {
 }
 
 // ─── Signal Processing ───────────────────────────
-function setAGC(mode) { if (socket) socket.emit('set_agc', mode); }
+function setAGC(mode) {
+    // mode is a numeric string (1=SuperFast, 2=Fast, 3=Slow, 5=User)
+    if (socket) socket.emit('set_agc', parseInt(mode));
+}
+
+// Mapping for display
+const AGC_LABELS = {0: 'OFF', 1: 'Super Fast', 2: 'Fast', 3: 'Slow', 4: 'Medium', 5: 'User'};
+
+function updateAGCSelect(value) {
+    const sel = document.getElementById('agc-select');
+    if (!sel) return;
+    const v = String(value);
+    // If the value isn't in our options, add it
+    if (![...sel.options].some(o => o.value === v)) {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = AGC_LABELS[value] || `Mode ${value}`;
+        sel.appendChild(opt);
+    }
+    sel.value = v;
+}
 function setNB(val) { if (socket) socket.emit('set_nb', val / 100); }
 
 function togglePreamp() {
@@ -803,12 +851,12 @@ async function scanSerialPorts() {
     } catch (e) { console.error('scanSerialPorts:', e); }
 }
 
-async function testRigctld() {
+async function testRadio() {
     const model = document.getElementById('cfg-hamlib-model').value;
     const device = document.getElementById('cfg-serial-device').value;
     const baudrate = document.getElementById('cfg-baudrate').value;
     try {
-        const res = await fetch('/api/rigctld/test', {
+        const res = await fetch('/api/radio/test', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({model, device, baudrate})
@@ -822,11 +870,9 @@ async function testRigctld() {
 async function saveInterfaces() {
     const cfg = {
         radio: {
-            rigctld_host: document.getElementById('cfg-rigctld-host').value,
-            rigctld_port: parseInt(document.getElementById('cfg-rigctld-port').value),
-            model: parseInt(document.getElementById('cfg-hamlib-model').value),
-            device: document.getElementById('cfg-serial-device').value,
-            baudrate: parseInt(document.getElementById('cfg-baudrate').value),
+            model_id: parseInt(document.getElementById('cfg-hamlib-model').value),
+            serial_port: document.getElementById('cfg-serial-device').value,
+            serial_baud: parseInt(document.getElementById('cfg-baudrate').value),
         },
         ptt: {
             mode: document.getElementById('cfg-ptt-mode').value,
@@ -872,7 +918,6 @@ async function scanAudioDevices() {
     } catch (e) { console.error('scanAudioDevices:', e); }
 }
 function testAudio() { /* TODO */ }
-function restartRigctld() { /* TODO */ }
 function startCalWizard() { /* TODO */ }
 function saveCalibration() { /* TODO */ }
 function addUser() { /* TODO */ }
@@ -920,11 +965,9 @@ function togglePttSerial() {
 function getSetupConfig() {
     return {
         radio: {
-            rigctld_host: document.getElementById('setup-rigctld-host').value,
-            rigctld_port: parseInt(document.getElementById('setup-rigctld-port').value),
-            model: parseInt(document.getElementById('setup-model').value) || 1,
-            device: document.getElementById('setup-device').value,
-            baudrate: parseInt(document.getElementById('setup-baudrate').value),
+            model_id: parseInt(document.getElementById('setup-model').value) || 1,
+            serial_port: document.getElementById('setup-device').value,
+            serial_baud: parseInt(document.getElementById('setup-baudrate').value),
             data_bits: parseInt(document.getElementById('setup-databits').value),
             stop_bits: parseInt(document.getElementById('setup-stopbits').value),
             parity: document.getElementById('setup-parity').value,
@@ -968,7 +1011,7 @@ async function testRadioConnection() {
 
     try {
         const cfg = getSetupConfig().radio;
-        const resp = await fetch('/api/rigctld/test', {
+        const resp = await fetch('/api/radio/test', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(cfg),
@@ -998,40 +1041,6 @@ async function saveSetup() {
         const r = document.getElementById('radio-test-result') || {};
         if (r.textContent !== undefined) { r.textContent = '💾 Configuration saved.'; r.className = 'setup-test-result ok'; }
     } catch (e) { alert('Save failed: ' + e.message); }
-}
-
-async function startRigctld() {
-    const cfg = getSetupConfig().radio;
-    const r = document.getElementById('radio-test-result');
-    r.textContent = '▶ Starting rigctld...';
-    try {
-        // First stop existing
-        await fetch('/api/rigctld/stop', {method: 'POST'});
-        // Then apply config which starts rigctld
-        const resp = await fetch('/api/config/apply', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(getSetupConfig()),
-        });
-        const data = await resp.json();
-        if (data.status === 'ok') {
-            r.textContent = '✅ rigctld started. Radio: ' + (data.radio || 'connected');
-            r.className = 'setup-test-result ok';
-        } else {
-            r.textContent = '⚠ ' + (data.error || data.radio || 'Issue');
-            r.className = 'setup-test-result fail';
-        }
-    } catch (e) { r.textContent = '❌ ' + e.message; r.className = 'setup-test-result fail'; }
-}
-
-async function stopRigctld() {
-    const r = document.getElementById('radio-test-result');
-    r.textContent = '■ Stopping rigctld...';
-    try {
-        await fetch('/api/rigctld/stop', {method: 'POST'});
-        r.textContent = '■ rigctld stopped.';
-        r.className = 'setup-test-result';
-    } catch (e) { r.textContent = '❌ ' + e.message; r.className = 'setup-test-result fail'; }
 }
 
 async function applySetup() {
@@ -1121,17 +1130,15 @@ async function loadConfigIntoSetup() {
         const a = cfg.audio || {};
         const p = cfg.ptt || {};
 
-        if (document.getElementById('setup-rigctld-host')) {
-            document.getElementById('setup-rigctld-host').value = r.rigctld_host || '127.0.0.1';
-            document.getElementById('setup-rigctld-port').value = r.rigctld_port || 4532;
-            document.getElementById('setup-model').value = r.model || '';
+        if (document.getElementById('setup-model')) {
+            document.getElementById('setup-model').value = r.model_id || '';
             // If model ID exists, try to find its label for the search field
-            if (r.model) {
+            if (r.model_id) {
                 document.getElementById('setup-model-search').value = '';
-                document.getElementById('setup-model-search').placeholder = `Model #${r.model} (search to rename...)`;
+                document.getElementById('setup-model-search').placeholder = `Model #${r.model_id} (search to rename...)`;
             }
-            document.getElementById('setup-device').value = r.device || '/dev/ttyUSB0';
-            document.getElementById('setup-baudrate').value = r.baudrate || 9600;
+            document.getElementById('setup-device').value = r.serial_port || '/dev/ttyUSB0';
+            document.getElementById('setup-baudrate').value = r.serial_baud || 9600;
             document.getElementById('setup-ptt-mode').value = p.mode || 'hamlib';
             document.getElementById('setup-tx-timeout').value = p.tx_timeout || 180;
         }

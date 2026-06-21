@@ -12,8 +12,8 @@
 <header id="topbar">
     <div class="logo">🔊 WebRig</div>
     <div class="status">
-        <span id="rigctld-status" class="status-dot disconnected" title="rigctld"></span>
-        <span id="rigctld-status-text">Disconnected</span>
+        <span id="radio-status" class="status-dot disconnected" title="Radio"></span>
+        <span id="radio-status-text">Disconnected</span>
     </div>
     <div class="spacer"></div>
     <div class="user-info">
@@ -267,10 +267,10 @@
     <div class="sig-control">
         <label>AGC</label>
         <select id="agc-select" onchange="setAGC(this.value)">
-            <option value="OFF">OFF</option>
-            <option value="FAST" selected>FAST</option>
-            <option value="SLOW">SLOW</option>
-            <option value="SUPERFAST">SUPERFAST</option>
+            <option value="1">Super Fast</option>
+            <option value="2" selected>Fast</option>
+            <option value="3">Slow</option>
+            <option value="5">User</option>
         </select>
     </div>
     <div class="sig-control">
@@ -342,21 +342,17 @@
     <!-- Interfaces Tab -->
     <div class="admin-tab-content active" id="admin-interfaces">
         <div class="panel">
-            <div class="panel-title">rigctld / Serial</div>
+            <div class="panel-title">Radio Connection</div>
             <div class="admin-form-grid">
-                <label>rigctld Host</label>
-                <input type="text" id="cfg-rigctld-host" value="127.0.0.1">
-                <label>rigctld Port</label>
-                <input type="number" id="cfg-rigctld-port" value="4532">
                 <label>Hamlib Model ID</label>
-                <input type="number" id="cfg-hamlib-model" placeholder="e.g. 1038">
+                <input type="number" id="cfg-hamlib-model" placeholder="e.g. 3087" value="3087">
                 <label>Serial Device</label>
                 <div style="display:flex;gap:4px">
                     <select id="cfg-serial-device" style="flex:1"></select>
                     <button onclick="scanSerialPorts()" class="admin-action" style="white-space:nowrap">🔍</button>
                 </div>
                 <label>Baudrate</label>
-                <input type="number" id="cfg-baudrate" value="9600">
+                <input type="number" id="cfg-baudrate" value="19200">
                 <label>PTT Mode</label>
                 <select id="cfg-ptt-mode">
                     <option value="hamlib">Hamlib (CAT)</option>
@@ -367,7 +363,7 @@
                 <label>PTT Serial Port</label>
                 <select id="cfg-ptt-port"><option value="">(same as serial)</option></select>
             </div>
-            <button onclick="testRigctld()" class="admin-action">🔌 Test Connection</button>
+            <button onclick="testRadio()" class="admin-action">🔌 Test Connection</button>
             <button onclick="saveInterfaces()" class="admin-action">💾 Save</button>
         </div>
 
@@ -486,7 +482,7 @@
         <div class="panel">
             <div class="panel-title">System Status</div>
             <div class="sys-info">
-                <div>rigctld: <span id="sys-rigctld-status">—</span> <button onclick="restartRigctld()">Restart</button></div>
+                <div>Radio: <span id="sys-radio-status">—</span></div>
                 <div>UDEV Symlinks: <span id="sys-udev-status">—</span></div>
                 <div>Audio Devices: <span id="sys-audio-count">—</span></div>
             </div>
@@ -522,10 +518,6 @@
             <!-- Radio Tab -->
             <div class="setup-tab-content active" id="setup-radio">
                 <div class="setup-form-grid">
-                    <label>rigctld Host</label>
-                    <input type="text" id="setup-rigctld-host" value="127.0.0.1">
-                    <label>rigctld Port</label>
-                    <input type="number" id="setup-rigctld-port" value="4532">
                     <label>Hamlib Model</label>
                     <div class="model-select-wrapper">
                         <input type="text" id="setup-model-search" placeholder="Search: Yaesu FT-991..." list="model-list" oninput="filterModels(this.value)">
@@ -541,8 +533,8 @@
                     <label>Baudrate</label>
                     <select id="setup-baudrate">
                         <option>4800</option>
-                        <option selected>9600</option>
-                        <option>19200</option>
+                        <option>9600</option>
+                        <option selected>19200</option>
                         <option>38400</option>
                         <option>57600</option>
                         <option>115200</option>
@@ -558,8 +550,6 @@
                 </div>
                 <div class="setup-actions">
                     <button onclick="testRadioConnection()" class="setup-action">🔌 Test Connection</button>
-                    <button onclick="startRigctld()" class="setup-action">▶ Start rigctld</button>
-                    <button onclick="stopRigctld()" class="setup-action">■ Stop rigctld</button>
                 </div>
                 <div id="radio-test-result" class="setup-test-result"></div>
             </div>

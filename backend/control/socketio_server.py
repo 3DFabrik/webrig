@@ -132,3 +132,18 @@ async def _push_full_state(sid):
     await sio.emit("vfo_b", {"freq": radio.state.vfo_b_freq,
                              "mode": radio.state.vfo_b_mode,
                              "passband": radio.state.vfo_b_passband}, to=sid)
+    # Secondary controls
+    try:
+        await sio.emit("agc", await radio.client.get_agc(), to=sid)
+    except Exception:
+        pass
+    try:
+        if radio.client.has_get_level("PREAMP"):
+            await sio.emit("preamp", await radio.client.get_preamp(), to=sid)
+    except Exception:
+        pass
+    try:
+        if radio.client.has_get_level("ATT"):
+            await sio.emit("attenuator", await radio.client.get_attenuator(), to=sid)
+    except Exception:
+        pass
