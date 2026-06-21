@@ -337,6 +337,9 @@ function tuneRelease() {
 function setMode(mode) {
     state.mode = mode;
     updateModeButtons();
+    // Remember mode for current band
+    const band = currentBandName(state.frequency);
+    if (band) rememberMode(band, mode);
     if (socket) socket.emit('set_mode', mode);
 }
 
@@ -367,13 +370,42 @@ const BAND_RANGES = [
     { name: '23cm', min: 1240000000, max: 1300000000 },
 ];
 
+// Default mode per band range (amateur radio convention)
+function defaultModeForBand(bandName) {
+    if (['2m', '70cm', '23cm', '6m', '4m'].includes(bandName)) return 'FM';
+    if (['2200m', '630m', '160m', '80m', '60m', '40m'].includes(bandName)) return 'LSB';
+    return 'USB'; // 30m and above (USB)
+}
+
+function rememberedMode(bandName) {
+    try {
+        const saved = localStorage.getItem('webrig_band_mode_' + bandName);
+        return saved || defaultModeForBand(bandName);
+    } catch { return defaultModeForBand(bandName); }
+}
+
+function rememberMode(bandName, mode) {
+    try { localStorage.setItem('webrig_band_mode_' + bandName, mode); } catch {}
+}
+
+function currentBandName(freq) {
+    const band = BAND_RANGES.find(b => freq >= b.min && freq <= b.max);
+    return band ? band.name : null;
+}
+
 function switchBand(btn) {
     const freq = parseInt(btn.dataset.freq);
+    const bandName = btn.dataset.band;
     // Optimistic UI update
     state.frequency = freq;
     updateFreqDisplay();
-    // Tell backend — if radio rejects, next poll will correct the highlight
+    // Tell backend — if radio rejects, next poll will correct
     if (socket) socket.emit('set_freq', freq);
+    // Auto-switch mode to remembered/default for this band
+    const mode = rememberedMode(bandName);
+    if (mode !== state.mode) {
+        setMode(mode);
+    }
 }
 
 function updateBandButtons(freq) {
