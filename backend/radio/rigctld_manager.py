@@ -103,6 +103,7 @@ class RigctldManager:
 
         # Stop the managed rigctld so the serial port is free
         was_running = self.is_running()
+        saved_args = list(self.current_args)  # remember for restart
         self.stop()
         if was_running:
             time.sleep(0.5)  # let the kernel release the tty
@@ -160,6 +161,18 @@ class RigctldManager:
             return {"ok": False, "error": "rigctld not installed"}
         except Exception as e:
             return {"ok": False, "error": str(e)}
+        finally:
+            # Restart the previously running rigctld with its original params
+            if was_running and saved_args:
+                try:
+                    self.process = subprocess.Popen(
+                        saved_args, stdout=subprocess.DEVNULL,
+                        stderr=subprocess.PIPE, preexec_fn=os.setsid,
+                    )
+                    self.current_args = saved_args
+                    log.info(f"rigctld restarted after test: {' '.join(saved_args)}")
+                except Exception as e:
+                    log.error(f"Failed to restart rigctld after test: {e}")
 
 
 # Singleton

@@ -94,7 +94,10 @@ class RadioManager:
 
     async def _smeter_loop(self):
         """Fast loop: S-Meter only (200ms default)."""
-        while self._running and self.client.connected:
+        while self._running:
+            if not self.client.connected:
+                await asyncio.sleep(0.5)
+                continue
             try:
                 db = await self.client.get_smeter()
                 if db != self.state.smeter_db:
@@ -107,7 +110,10 @@ class RadioManager:
 
     async def _state_loop(self):
         """Slow loop: freq, mode, vfo, ptt (1s default)."""
-        while self._running and self.client.connected:
+        while self._running:
+            if not self.client.connected:
+                await asyncio.sleep(0.5)
+                continue
             try:
                 freq = await self.client.get_freq()
                 if freq != self.state.frequency:

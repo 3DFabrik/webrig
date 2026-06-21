@@ -219,13 +219,31 @@ async def apply_config(request: Request):
 
 @app.post("/api/rigctld/test")
 async def test_rigctld(request: Request):
-    """Test rigctld connection with given params without saving."""
+    """Test rigctld connection with given params without saving.
+
+    The test stops the running rigctld; the manager restarts it
+    automatically afterwards. We also reconnect the radio manager
+    so the frontend resumes receiving data.
+    """
     body = await request.json()
     result = rigctld_mgr.test_connection(
         model=int(body.get("model", 1)),
         device=body.get("device", "/dev/ttyUSB0"),
         baudrate=int(body.get("baudrate", 9600)),
     )
+
+    # Give rigctld a moment to come back up, then reconnect radio manager
+    if rigctld_mgr.is_running():
+        import asyncio as _aio
+        await _aio.sleep(1.0)
+        if _sio_mod.radio and not _sio_mod.radio.client.connected:
+            try:
+                await _sio_mod.radio.disconnect()
+                await _sio_mod.radio.connect()
+                logger.info("Radio manager reconnected after test")
+            except Exception as e:
+                logger.warning(f"Radio manager reconnect failed: {e}")
+
     return result
 
 
