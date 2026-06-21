@@ -74,6 +74,8 @@ function connectSocket() {
 
     socket.on('frequency', (freq) => {
         state.frequency = freq;
+        if (state.selectedVFO === 'VFOA') state.vfoA.freq = freq;
+        else state.vfoB.freq = freq;
         updateFreqDisplay();
     });
 
@@ -98,7 +100,7 @@ function connectSocket() {
 
     socket.on('vfo_a', (data) => {
         state.vfoA = data;
-        document.getElementById('vfo-a-freq').textContent = formatFreq(data.freq);
+        renderVFOdigits(data.freq, 'A');
         if (state.selectedVFO === 'VFOA') {
             state.frequency = data.freq;
             state.mode = data.mode;
@@ -108,7 +110,7 @@ function connectSocket() {
 
     socket.on('vfo_b', (data) => {
         state.vfoB = data;
-        document.getElementById('vfo-b-freq').textContent = formatFreq(data.freq);
+        renderVFOdigits(data.freq, 'B');
         if (state.selectedVFO === 'VFOB') {
             state.frequency = data.freq;
             state.mode = data.mode;
@@ -239,14 +241,10 @@ function formatFreq(hz) {
 }
 
 function updateFreqDisplay() {
-    const aEl = document.getElementById('vfo-a-freq');
-    const bEl = document.getElementById('vfo-b-freq');
-    if (!aEl) return;
-
     if (state.selectedVFO === 'VFOA') {
-        aEl.textContent = formatFreq(state.frequency);
+        renderVFOdigits(state.frequency, 'A');
     } else {
-        bEl.textContent = formatFreq(state.frequency);
+        renderVFOdigits(state.frequency, 'B');
     }
     updateVFOHighlight();
 }
@@ -254,6 +252,8 @@ function updateFreqDisplay() {
 function updateVFOHighlight() {
     document.getElementById('vfo-a-box')?.classList.toggle('active', state.selectedVFO === 'VFOA');
     document.getElementById('vfo-b-box')?.classList.toggle('active', state.selectedVFO === 'VFOB');
+    document.getElementById('vfo-a-label')?.classList.toggle('active', state.selectedVFO === 'VFOA');
+    document.getElementById('vfo-b-label')?.classList.toggle('active', state.selectedVFO === 'VFOB');
 }
 
 function editFreq(which) {
@@ -299,6 +299,212 @@ function tuneFreq(deltaHz) {
     if (state.frequency < 0) state.frequency = 0;
     updateFreqDisplay();
     if (socket) socket.emit('set_freq', state.frequency);
+}
+
+// ─── VFO Digit Rendering & Editing ──────────────
+function renderVFOdigits(freqHz, vfoId) {
+    const container = document.getElementById('vfo-' + vfoId.toLowerCase() + '-digits');
+    if (!container) return;
+
+    // Store freq for this VFO
+    if (vfoId === 'A') state.vfoA.freq = freqHz;
+    else state.vfoB.freq = freqHz;
+
+    // Format: XXX.XXX.XXX (9 digits + 2 dots, leading zeros)
+    const padded = String(Math.max(0, Math.floor(freqHz || 0))).padStart(9, '0');
+    const chars = padded.split('');
+
+    container.innerHTML = '';
+    for (let i = 0; i < chars.length; i++) {
+        if (i === 3 || i === 6) {
+            const sep = document.createElement('span');
+            sep.className = 'digit-sep';
+            sep.textContent = '.';
+            container.appendChild(sep);
+        }
+        const span = document.createElement('span');
+        span.className = 'digit';
+        span.textContent = chars[i];
+        span.dataset.pos = i;
+        span.addEventListener('click', () => startDigitEdit(span, vfoId));
+        container.appendChild(span);
+    }
+}
+
+function startDigitEdit(span, vfoId) {
+    document.querySelectorAll('.digit.editing').forEach(d => d.classList.remove('editing'));
+    span.classList.add('editing');
+
+    const pos = parseInt(span.dataset.pos);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.inputMode = 'numeric';
+    input.maxLength = 1;
+    input.value = '';
+    input.className = 'digit-input';
+
+    const rect = span.getBoundingClientRect();
+    const containerRect = span.closest('.vfo-digits').getBoundingClientRect();
+    input.style.position = 'absolute';
+    input.style.left = (rect.left - containerRect.left) + 'px';
+    input.style.top = (rect.top - containerRect.top) + 'px';
+    input.style.width = rect.width + 'px';
+    input.style.height = rect.height + 'px';
+
+    const digitsContainer = span.closest('.vfo-digits');
+    digitsContainer.style.position = 'relative';
+    digitsContainer.appendChild(input);
+    input.focus();
+
+    let committed = false;
+
+    function cleanup() {
+        span.classList.remove('editing');
+        if (input.parentNode) input.remove();
+    }
+
+    function commit() {
+        if (committed) return;
+        committed = true;
+        const val = input.value.trim();
+        if (val >= '0' && val <= '9') {
+            span.textContent = val;
+            applyDigitChange(vfoId);
+        }
+        cleanup();
+    }
+
+    function commitAndAdvance(dir) {
+        if (committed) return;
+        committed = true;
+        const val = input.value.trim();
+        if (val >= '0' && val <= '9') {
+            span.textContent = val;
+            applyDigitChange(vfoId);
+            const next = digitsContainer.querySelector('.digit[data-pos="' + (pos + dir) + '"]');
+            cleanup();
+            if (next) startDigitEdit(next, vfoId);
+        } else {
+            cleanup();
+        }
+    }
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        else if (e.key === 'Escape') { e.preventDefault(); committed = true; cleanup(); }
+        else if (e.key === 'Backspace' && !input.value) {
+            e.preventDefault();
+            const prev = digitsContainer.querySelector('.digit[data-pos="' + (pos - 1) + '"]');
+            committed = true; cleanup();
+            if (prev) startDigitEdit(prev, vfoId);
+        }
+    });
+
+    input.addEventListener('input', () => {
+        if (input.value.length >= 1) {
+            const v = input.value.slice(-1);
+            if (v >= '0' && v <= '9') {
+                input.value = v;
+                commitAndAdvance(1);
+            } else {
+                input.value = '';
+            }
+        }
+    });
+
+    input.addEventListener('blur', commit);
+}
+
+function applyDigitChange(vfoId) {
+    const container = document.getElementById('vfo-' + vfoId.toLowerCase() + '-digits');
+    if (!container) return;
+
+    const digits = container.querySelectorAll('.digit');
+    let freqStr = '';
+    digits.forEach(d => freqStr += d.textContent);
+
+    const freqHz = parseInt(freqStr, 10);
+    if (isNaN(freqHz)) return;
+
+    if (vfoId === 'A') state.vfoA.freq = freqHz;
+    else state.vfoB.freq = freqHz;
+
+    if ((vfoId === 'A' && state.selectedVFO === 'VFOA') ||
+        (vfoId === 'B' && state.selectedVFO === 'VFOB')) {
+        state.frequency = freqHz;
+    }
+
+    if (socket) socket.emit('set_freq', freqHz);
+}
+
+// ─── Step Tuning with Press-and-Hold ─────────────
+function getStepSize(vfoId) {
+    const sel = document.getElementById('step-select-' + vfoId.toLowerCase());
+    return sel ? parseInt(sel.value) : 10000;
+}
+
+function tuneUp(vfoId) {
+    const vfo = vfoId || (state.selectedVFO === 'VFOA' ? 'A' : 'B');
+    const step = getStepSize(vfo);
+    const curFreq = (vfo === 'A') ? state.vfoA.freq : state.vfoB.freq;
+    const newFreq = Math.max(0, curFreq + step);
+    applyTuneStep(vfo, newFreq);
+}
+
+function tuneDown(vfoId) {
+    const vfo = vfoId || (state.selectedVFO === 'VFOA' ? 'A' : 'B');
+    const step = getStepSize(vfo);
+    const curFreq = (vfo === 'A') ? state.vfoA.freq : state.vfoB.freq;
+    const newFreq = Math.max(0, curFreq - step);
+    applyTuneStep(vfo, newFreq);
+}
+
+function applyTuneStep(vfo, newFreq) {
+    if (vfo === 'A') state.vfoA.freq = newFreq;
+    else state.vfoB.freq = newFreq;
+
+    if ((vfo === 'A' && state.selectedVFO === 'VFOA') ||
+        (vfo === 'B' && state.selectedVFO === 'VFOB')) {
+        state.frequency = newFreq;
+    }
+
+    renderVFOdigits(newFreq, vfo);
+    if (socket) socket.emit('set_freq', newFreq);
+}
+
+function initTuneButtons() {
+    document.querySelectorAll('.tune-btn').forEach(btn => {
+        const vfo = btn.dataset.vfo;
+        const dir = btn.dataset.dir;
+        let timer = null;
+
+        function doStep() {
+            if (dir === 'up') tuneUp(vfo);
+            else tuneDown(vfo);
+        }
+
+        function startHold(e) {
+            if (e) e.preventDefault();
+            doStep();
+            let rate = 150;
+            timer = setTimeout(function repeat() {
+                doStep();
+                rate = Math.max(40, rate * 0.92);
+                timer = setTimeout(repeat, rate);
+            }, 400);
+        }
+
+        function stopHold() {
+            if (timer) { clearTimeout(timer); timer = null; }
+        }
+
+        btn.addEventListener('mousedown', startHold);
+        btn.addEventListener('touchstart', startHold, {passive: false});
+        btn.addEventListener('mouseup', stopHold);
+        btn.addEventListener('mouseleave', stopHold);
+        btn.addEventListener('touchend', stopHold);
+        btn.addEventListener('touchcancel', stopHold);
+    });
 }
 
 // ─── Mode ────────────────────────────────────────
@@ -373,8 +579,10 @@ function updateSmeter(dbValue) {
 
     document.getElementById('smeter-s-units').textContent = formatSUnits(sUnits);
     document.getElementById('smeter-dbm').textContent = dbm.toFixed(0) + ' dBm';
-    document.getElementById('smeter-uv').textContent = uv.toFixed(1) + ' μV';
-    document.getElementById('smeter-raw').textContent = 'raw: ' + dbValue.toFixed(0);
+    const uvEl = document.getElementById('smeter-uv');
+    if (uvEl) uvEl.textContent = uv.toFixed(1) + ' μV';
+    const rawEl = document.getElementById('smeter-raw');
+    if (rawEl) rawEl.textContent = 'raw: ' + dbValue.toFixed(0);
 
     // Graph data
     state.smeterHistory.push({ t: Date.now(), v: dbValue });
@@ -410,8 +618,10 @@ function updateMicMeter(level) {
     const dbfs = level > 0 ? 20 * Math.log10(level) : -60;
     document.getElementById('smeter-s-units').textContent = (dbfs > -10) ? 'HOT' : (dbfs > -30 ? 'OK' : 'LOW');
     document.getElementById('smeter-dbm').textContent = dbfs.toFixed(0) + ' dBFS';
-    document.getElementById('smeter-uv').textContent = (level * 100).toFixed(0) + ' %';
-    document.getElementById('smeter-raw').textContent = 'mic: ' + level.toFixed(3);
+    const uvEl = document.getElementById('smeter-uv');
+    if (uvEl) uvEl.textContent = (level * 100).toFixed(0) + ' %';
+    const rawEl = document.getElementById('smeter-raw');
+    if (rawEl) rawEl.textContent = 'mic: ' + level.toFixed(3);
 
     // Graph data
     state.smeterHistory.push({ t: Date.now(), v: dbfs + 33 });
@@ -704,6 +914,7 @@ function toggleSplit() {
 // ─── Macros ──────────────────────────────────────
 function renderMacros() {
     const list = document.getElementById('macro-list');
+    if (!list) return;
     list.innerHTML = '';
     state.macros.forEach((m, i) => {
         const item = document.createElement('div');
@@ -949,6 +1160,7 @@ const DCS_CODES = [23, 25, 26, 31, 32, 36, 43, 47, 51, 53, 54, 65, 71, 72, 73, 7
 
 function populateTones() {
     const ctcss = document.getElementById('ctcss-select');
+    if (!ctcss) return;
     CTCSS_TONES.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t;
@@ -1285,12 +1497,22 @@ function init() {
     // Mic level → S-Meter during TX
     txAudio.onMicLevel = (level) => updateMicMeter(level);
 
-    // Peak hold slider
+    // Peak hold slider (optional — removed in compact layout)
     const peakSlider = document.getElementById('peak-hold-time');
-    peakSlider.oninput = () => {
-        state.peakHoldTime = parseInt(peakSlider.value);
-        document.getElementById('peak-hold-val').textContent = state.peakHoldTime + 's';
-    };
+    if (peakSlider) {
+        peakSlider.oninput = () => {
+            state.peakHoldTime = parseInt(peakSlider.value);
+            const valEl = document.getElementById('peak-hold-val');
+            if (valEl) valEl.textContent = state.peakHoldTime + 's';
+        };
+    }
+
+    // Init tune button press-and-hold
+    initTuneButtons();
+
+    // Initial VFO render
+    renderVFOdigits(state.vfoA.freq || state.frequency || 0, 'A');
+    renderVFOdigits(state.vfoB.freq || 0, 'B');
 
     // Check admin status
     if (window.CURRENT_USER && window.CURRENT_USER.admin) {
