@@ -1,0 +1,13 @@
+[Unit]
+Description=rigctld Hamlib Radio Control Daemon
+After=network.target
+After=dev-ttyACM1.device
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rigctld -m 3087 -r /dev/ttyACM1 -s 19200 -T 127.0.0.1 -t 4532
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
