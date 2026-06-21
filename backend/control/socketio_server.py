@@ -96,12 +96,19 @@ def init_radio():
         await radio.set_nb(float(level))
 
     @sio.on("set_preamp")
-    async def on_set_preamp(sid, on):
-        await radio.set_preamp(bool(on))
+    async def on_set_preamp(sid, data):
+        # data can be bool (toggle) or {on: bool, level: int}
+        if isinstance(data, dict):
+            await radio.set_preamp(bool(data.get("on", True)), int(data.get("level", 0)))
+        else:
+            await radio.set_preamp(bool(data))
 
     @sio.on("set_attenuator")
-    async def on_set_attenuator(sid, on):
-        await radio.set_attenuator(bool(on))
+    async def on_set_attenuator(sid, data):
+        if isinstance(data, dict):
+            await radio.set_attenuator(bool(data.get("on", True)), int(data.get("level", 0)))
+        else:
+            await radio.set_attenuator(bool(data))
 
     @sio.on("set_poll_rate")
     async def on_set_poll_rate(sid, ms):

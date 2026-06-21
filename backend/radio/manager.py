@@ -239,12 +239,12 @@ class RadioManager:
         if await self.client.set_nb(level):
             self.state.nb = level
 
-    async def set_attenuator(self, on: bool):
-        if await self.client.set_attenuator(on):
+    async def set_attenuator(self, on: bool, level: int = 0):
+        if await self.client.set_attenuator(on, level):
             self.state.attenuator = on
             await self._emit("attenuator", on)
 
-    async def set_preamp(self, on: bool):
-        if await self.client.set_preamp(on):
+    async def set_preamp(self, on: bool, level: int = 0):
+        if await self.client.set_preamp(on, level):
             self.state.preamp = on
             await self._emit("preamp", on)

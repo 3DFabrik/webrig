@@ -156,7 +156,7 @@ function connectSocket() {
         state.preamp = on;
         const btn = document.getElementById('preamp-btn');
         btn.classList.toggle('active', on);
-        const db = btn.dataset.db || '10';
+        const db = state.preampLevel || parseInt(btn.dataset.db) || 10;
         btn.textContent = on ? `${db}dB` : 'OFF';
     });
 
@@ -164,7 +164,7 @@ function connectSocket() {
         state.attenuator = on;
         const btn = document.getElementById('att-btn');
         btn.classList.toggle('active', on);
-        const db = btn.dataset.db || '12';
+        const db = state.attLevel || parseInt(btn.dataset.db) || 12;
         btn.textContent = on ? `${db}dB` : 'OFF';
     });
 
@@ -173,12 +173,14 @@ function connectSocket() {
         const preampBtn = document.getElementById('preamp-btn');
         const attBtn = document.getElementById('att-btn');
         if (data.preamp_levels && data.preamp_levels.length > 0 && preampBtn) {
-            preampBtn.dataset.db = data.preamp_levels[0];
-            preampBtn.title = `Preamp ${data.preamp_levels[0]} dB`;
+            state.preampLevel = data.preamp_levels[data.preamp_levels.length - 1]; // highest available
+            preampBtn.dataset.db = state.preampLevel;
+            preampBtn.title = `Preamp (max ${state.preampLevel} dB)`;
         }
         if (data.att_levels && data.att_levels.length > 0 && attBtn) {
-            attBtn.dataset.db = data.att_levels[0];
-            attBtn.title = `Attenuator ${data.att_levels[0]} dB`;
+            state.attLevel = data.att_levels[data.att_levels.length - 1]; // highest available
+            attBtn.dataset.db = state.attLevel;
+            attBtn.title = `Attenuator (max ${state.attLevel} dB)`;
         }
     });
 
@@ -677,18 +679,18 @@ function togglePreamp() {
     state.preamp = !state.preamp;
     const btn = document.getElementById('preamp-btn');
     btn.classList.toggle('active', state.preamp);
-    const db = btn.dataset.db || '10';
+    const db = state.preampLevel || parseInt(btn.dataset.db) || 10;
     btn.textContent = state.preamp ? `${db}dB` : 'OFF';
-    if (socket) socket.emit('set_preamp', state.preamp);
+    if (socket) socket.emit('set_preamp', {on: state.preamp, level: state.preamp ? db : 0});
 }
 
 function toggleAtt() {
     state.attenuator = !state.attenuator;
     const btn = document.getElementById('att-btn');
     btn.classList.toggle('active', state.attenuator);
-    const db = btn.dataset.db || '12';
+    const db = state.attLevel || parseInt(btn.dataset.db) || 12;
     btn.textContent = state.attenuator ? `${db}dB` : 'OFF';
-    if (socket) socket.emit('set_attenuator', state.attenuator);
+    if (socket) socket.emit('set_attenuator', {on: state.attenuator, level: state.attenuator ? db : 0});
 }
 
 function toggleSplit() {

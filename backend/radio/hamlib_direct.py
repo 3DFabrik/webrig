@@ -401,20 +401,30 @@ class HamlibDirectClient:
         val = await self.get_level_int("ATT")
         return val > 0
 
-    async def set_attenuator(self, on: bool) -> bool:
-        # Toggle between 0 (off) and first available attenuator level
+    async def set_attenuator(self, on: bool, level: int = 0) -> bool:
+        # If level specified, use it; otherwise toggle between 0 and first available
         levels = self.get_attenuator_levels()
-        val = levels[0] if levels and on else 0
+        if level > 0:
+            val = level
+        elif levels and on:
+            val = levels[0]
+        else:
+            val = 0
         return await self.set_level("ATT", val)
 
     async def get_preamp(self) -> bool:
         val = await self.get_level_int("PREAMP")
         return val > 0
 
-    async def set_preamp(self, on: bool) -> bool:
-        # Toggle between 0 (off) and first available preamp level
+    async def set_preamp(self, on: bool, level: int = 0) -> bool:
+        # If level specified, use it; otherwise toggle between 0 and first available
         levels = self.get_preamp_levels()
-        val = levels[0] if levels and on else 0
+        if level > 0:
+            val = level
+        elif levels and on:
+            val = levels[0]
+        else:
+            val = 0
         return await self.set_level("PREAMP", val)
 
     # ─── NB (Noise Blanker) ──────────────────────────────────
