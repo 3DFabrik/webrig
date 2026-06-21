@@ -472,6 +472,26 @@ class HamlibDirectClient:
                 return False
         return await self._run(_do)
 
+    def has_get_func(self, name: str) -> bool:
+        """Check if the radio supports getting a function."""
+        const = _FUNC_CONSTANTS.get(name.upper())
+        if const is None or self._rig is None:
+            return False
+        try:
+            return bool(self._rig.caps.has_get_func & const)
+        except Exception:
+            return False
+
+    def has_set_func(self, name: str) -> bool:
+        """Check if the radio supports setting a function."""
+        const = _FUNC_CONSTANTS.get(name.upper())
+        if const is None or self._rig is None:
+            return False
+        try:
+            return bool(self._rig.caps.has_set_func & const)
+        except Exception:
+            return False
+
     # ─── Capability check ────────────────────────────────────
 
     def has_get_level(self, name: str) -> bool:

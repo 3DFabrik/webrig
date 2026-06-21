@@ -4,6 +4,7 @@ Real-time bidirectional communication between backend and frontend.
 Handles all radio control commands and pushes state updates to clients.
 """
 
+import asyncio
 import logging
 import socketio as sio_module
 
@@ -112,11 +113,17 @@ def init_radio():
 
     @sio.on("set_tuner")
     async def on_set_tuner(sid, on):
+        log.info(f"set_tuner received: on={on}, radio={radio is not None}")
+        if radio is None:
+            return
+        # Check if radio supports TUNER func
+        if not radio.client.has_set_func("TUNER"):
+            log.info("Radio does not support TUNER func")
+            await radio._emit("tuner", "unsupported")
+            return
         if on:
-            # Start tuning
             await radio.client.set_func("TUNER", True)
             await radio._emit("tuner", "tuning")
-            # Poll tuning status until done
             asyncio.create_task(_poll_tuner(radio))
         else:
             await radio.client.set_func("TUNER", False)
@@ -140,7 +147,6 @@ async def _poll_tuner(radio):
     """Poll tuner status until tuning completes.
     Falls get_func always returns 0 (SWIG binding bug),
     we use a fixed wait time as fallback."""
-    import asyncio, logging
     log = logging.getLogger(__name__)
     max_wait = 10  # seconds timeout
     got_real_status = False

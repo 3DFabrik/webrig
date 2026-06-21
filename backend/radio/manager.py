@@ -126,6 +126,7 @@ class RadioManager:
             await self._emit("rig_caps", {
                 "preamp_levels": self.client.get_preamp_levels(),
                 "att_levels": self.client.get_attenuator_levels(),
+                "has_tuner": self.client.has_set_func("TUNER"),
             })
 
             # Read and emit secondary controls with capability checks

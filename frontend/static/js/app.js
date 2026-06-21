@@ -68,46 +68,33 @@ function connectSocket() {
         setConnectionState(false);
     });
 
-    // ─── Tuner ──────────────────────────────────────
-function toggleTuner() {
-    if (state.tuner === 'tuning') return; // ignore press while tuning
-    if (state.tuner === 'off' || !state.tuner) {
-        state.tuner = 'tuning';
+    socket.on('tuner', (status) => {
+        state.tuner = status;
         const btn = document.getElementById('tuner-btn');
-        btn.classList.add('tuning');
-        btn.classList.remove('active');
-        btn.textContent = 'Tuning...';
-        if (socket) socket.emit('set_tuner', true);
-    }
-}
-
-socket.on('tuner', (status) => {
-    state.tuner = status;
-    const btn = document.getElementById('tuner-btn');
-    if (!btn) return;
-    btn.classList.remove('active', 'tuning');
-    if (status === 'tuning') {
-        btn.classList.add('tuning');
-        btn.textContent = 'Tuning...';
-    } else if (status === 'done') {
-        btn.textContent = 'ATU';
-        btn.classList.add('active');
-        setTimeout(() => {
-            btn.classList.remove('active');
-            state.tuner = 'off';
-        }, 3000);
-    } else if (status === 'timeout') {
-        btn.textContent = 'ATU Timeout';
-        setTimeout(() => {
+        if (!btn) return;
+        btn.classList.remove('active', 'tuning');
+        if (status === 'tuning') {
+            btn.classList.add('tuning');
+            btn.textContent = 'Tuning...';
+        } else if (status === 'done') {
             btn.textContent = 'ATU';
-            state.tuner = 'off';
-        }, 3000);
-    } else {
-        btn.textContent = 'ATU';
-    }
-});
+            btn.classList.add('active');
+            setTimeout(() => {
+                btn.classList.remove('active');
+                state.tuner = 'off';
+            }, 3000);
+        } else if (status === 'timeout') {
+            btn.textContent = 'ATU Timeout';
+            setTimeout(() => {
+                btn.textContent = 'ATU';
+                state.tuner = 'off';
+            }, 3000);
+        } else {
+            btn.textContent = 'ATU';
+        }
+    });
 
-socket.on('connection', (connected) => {
+    socket.on('connection', (connected) => {
         setConnectionState(connected);
     });
 
@@ -220,6 +207,19 @@ socket.on('connection', (connected) => {
             state.attLevel = data.att_levels[data.att_levels.length - 1]; // highest available
             attBtn.dataset.db = state.attLevel;
             attBtn.title = `Attenuator (max ${state.attLevel} dB)`;
+        }
+        // Tuner support
+        const tunerBtn = document.getElementById('tuner-btn');
+        if (tunerBtn) {
+            if (data.has_tuner) {
+                tunerBtn.disabled = false;
+                tunerBtn.classList.remove('disabled');
+                tunerBtn.title = 'Antenna Tuner';
+            } else {
+                tunerBtn.disabled = true;
+                tunerBtn.classList.add('disabled');
+                tunerBtn.title = 'Antenna Tuner (not supported by this radio)';
+            }
         }
     });
 
@@ -829,6 +829,21 @@ function togglePreamp() {
     const db = state.preampLevel || parseInt(btn.dataset.db) || 10;
     btn.textContent = state.preamp ? `${db}dB` : 'OFF';
     if (socket) socket.emit('set_preamp', {on: state.preamp, level: state.preamp ? db : 0});
+}
+
+// ─── Tuner ──────────────────────────────────────
+function toggleTuner() {
+    if (state.tuner === 'tuning') return;
+    const btn = document.getElementById('tuner-btn');
+    if (btn && btn.disabled) return;
+    if (state.tuner === 'off' || !state.tuner) {
+        state.tuner = 'tuning';
+        const btn = document.getElementById('tuner-btn');
+        btn.classList.add('tuning');
+        btn.classList.remove('active');
+        btn.textContent = 'Tuning...';
+        if (socket) socket.emit('set_tuner', true);
+    }
 }
 
 function toggleAtt() {
