@@ -123,11 +123,13 @@ class RadioManager:
                                        "passband": self.state.vfo_b_passband})
 
             # Send available preamp/att levels to frontend
+            rfpower = await self.client.get_rfpower()
             await self._emit("rig_caps", {
                 "preamp_levels": self.client.get_preamp_levels(),
                 "att_levels": self.client.get_attenuator_levels(),
                 "has_tuner": self.client.has_set_func("TUNER"),
             })
+            await self._emit("rfpower", rfpower)
 
             # Read and emit secondary controls with capability checks
             # Some radios support set but not get for certain levels (e.g. X6100 PREAMP/ATT)
@@ -150,18 +152,30 @@ class RadioManager:
             log.warning(f"Full poll error: {e}")
 
     async def _smeter_loop(self):
-        """Fast loop: S-Meter only."""
+        """Fast loop: S-Meter (RX) or SWR/ALC (TX)."""
         while self._running:
             if not self.state.connected:
                 await asyncio.sleep(0.5)
                 continue
             try:
-                db = await self.client.get_smeter()
-                if db != self.state.smeter_db:
-                    self.state.smeter_db = db
-                    await self._emit("smeter", db)
+                if self.state.ptt:
+                    # TX: poll SWR and ALC instead of S-Meter
+                    swr = await self.client.get_swr()
+                    alc = await self.client.get_alc()
+                    if swr != getattr(self.state, 'swr', -1):
+                        self.state.swr = swr
+                        await self._emit("swr", swr)
+                    if alc != getattr(self.state, 'alc', -1):
+                        self.state.alc = alc
+                        await self._emit("alc", alc)
+                else:
+                    # RX: normal S-Meter
+                    db = await self.client.get_smeter()
+                    if db != self.state.smeter_db:
+                        self.state.smeter_db = db
+                        await self._emit("smeter", db)
             except Exception as e:
-                log.debug(f"SMeter poll error: {e}")
+                log.debug(f"SMeter/TX poll error: {e}")
             await asyncio.sleep(self._smeter_interval)
 
     async def _state_loop(self):

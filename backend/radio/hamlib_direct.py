@@ -440,10 +440,19 @@ class HamlibDirectClient:
     async def set_nb(self, level: float) -> bool:
         return await self.set_level("NB", level)
 
-    # ─── SWR ──────────────────────────────────────────────────
+    # ─── SWR / ALC / RFPOWER ────────────────────────────────
 
     async def get_swr(self) -> float:
         return await self.get_level_float("SWR")
+
+    async def get_alc(self) -> float:
+        return await self.get_level_float("ALC")
+
+    async def get_rfpower(self) -> float:
+        return await self.get_level_float("RFPOWER")
+
+    async def set_rfpower(self, val: float) -> bool:
+        return await self.set_level("RFPOWER", val)
 
     # ─── Functions (NB, NR, ANF, etc. as toggles) ────────────
 

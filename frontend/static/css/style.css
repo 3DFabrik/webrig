@@ -628,9 +628,28 @@ input[type="range"]::-webkit-slider-thumb {
     transition: width 0.1s;
 }
 .audio-meter-fill.tx { background: var(--orange); }
+.audio-meter-fill.swr { background: linear-gradient(90deg, var(--radio-green) 0%, var(--radio-green) 50%, var(--yellow) 75%, var(--red) 100%); }
+.audio-meter-fill.alc { background: var(--s1-color); }
+
+.meter-value {
+    font-family: var(--font-mono);
+    font-size: 0.7em;
+    min-width: 40px;
+    text-align: right;
+}
 
 /* ═══ TX Panel ═══ */
 .tx-panel { }
+
+.rfpower-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-bottom: 0.5em;
+    font-size: 0.8em;
+}
+.rfpower-control label { min-width: 45px; color: var(--text-dim); flex-shrink: 0; }
+.rfpower-control input[type="range"] { flex: 1; max-width: 120px; }
 
 .mic-control {
     display: flex;

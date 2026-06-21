@@ -279,10 +279,27 @@
 
         <div class="panel tx-panel">
             <div class="panel-title">Transmit</div>
+            <div class="rfpower-control">
+                <label>RF Power</label>
+                <input type="range" id="rfpower-slider" min="0" max="100" value="100" oninput="setRFPower(this.value)">
+                <span id="rfpower-val">100%</span>
+            </div>
             <div class="mic-control">
                 <label>Mic Gain</label>
                 <input type="range" id="mic-gain" min="0" max="100" value="70" oninput="setMicGain(this.value)">
                 <span id="mic-val">70%</span>
+            </div>
+            <div class="audio-meters">
+                <div class="meter-row">
+                    <span class="meter-label">SWR</span>
+                    <div class="audio-meter"><div class="audio-meter-fill swr" id="swr-meter"></div></div>
+                    <span id="swr-val" class="meter-value">—</span>
+                </div>
+                <div class="meter-row">
+                    <span class="meter-label">ALC</span>
+                    <div class="audio-meter"><div class="audio-meter-fill alc" id="alc-meter"></div></div>
+                    <span id="alc-val" class="meter-value">—</span>
+                </div>
             </div>
             <div class="tx-led" id="tx-led">RX</div>
             <button id="tuner-btn" class="tuner-button" onclick="toggleTuner()">ATU</button>

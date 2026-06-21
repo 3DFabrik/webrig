@@ -142,7 +142,44 @@ function connectSocket() {
         }
     });
 
-    socket.on('ptt', (on) => {
+    // ─── RF Power ───────────────────────────────────
+function setRFPower(val) {
+    const pct = Math.round(val);
+    document.getElementById('rfpower-val').textContent = pct + '%';
+    if (socket) socket.emit('set_rfpower', parseFloat(val) / 100);
+}
+
+socket.on('rfpower', (val) => {
+    const pct = Math.round(val * 100);
+    const slider = document.getElementById('rfpower-slider');
+    if (slider) slider.value = pct;
+    const display = document.getElementById('rfpower-val');
+    if (display) display.textContent = pct + '%';
+});
+
+// ─── SWR / ALC meters ────────────────────────────
+socket.on('swr', (val) => {
+    const meter = document.getElementById('swr-meter');
+    const display = document.getElementById('swr-val');
+    if (meter) {
+        // SWR: 1.0 = good, 3.0+ = bad. Scale: 1.0-5.0 → 0-100%
+        const pct = Math.min(100, Math.max(0, ((val - 1.0) / 4.0) * 100));
+        meter.style.width = pct + '%';
+    }
+    if (display) display.textContent = val > 0 ? val.toFixed(1) + ':1' : '—';
+});
+
+socket.on('alc', (val) => {
+    const meter = document.getElementById('alc-meter');
+    const display = document.getElementById('alc-val');
+    if (meter) {
+        const pct = Math.min(100, Math.abs(val) * 100);
+        meter.style.width = pct + '%';
+    }
+    if (display) display.textContent = val !== 0 ? val.toFixed(2) : '—';
+});
+
+socket.on('ptt', (on) => {
         state.ptt = on;
         const btn = document.getElementById('ptt-btn');
         const led = document.getElementById('tx-led');
