@@ -159,7 +159,7 @@ class RadioManager:
                 continue
             try:
                 if self.state.ptt:
-                    # TX: poll SWR and ALC instead of S-Meter
+                    # TX: poll SWR and ALC
                     swr = await self.client.get_swr()
                     alc = await self.client.get_alc()
                     if swr != getattr(self.state, 'swr', -1):
@@ -201,10 +201,8 @@ class RadioManager:
                     self.state.passband = pb
                     await self._emit("mode", {"mode": mode, "passband": pb})
 
-                ptt = await self.client.get_ptt()
-                if ptt != self.state.ptt:
-                    self.state.ptt = ptt
-                    await self._emit("ptt", ptt)
+                # Don't poll PTT from radio — it's unreliable on many radios
+                # and can override active TX state. PTT is tracked via set_ptt only.
 
             except Exception as e:
                 fail_count += 1
