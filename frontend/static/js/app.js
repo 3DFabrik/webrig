@@ -351,7 +351,6 @@ function updateModeButtons() {
 
 // ─── Band switching ─────────────────────────────
 const BAND_RANGES = [
-    { name: '2200m', min: 135700, max: 137800 },
     { name: '630m', min: 472000, max: 479000 },
     { name: '160m', min: 1800000, max: 2000000 },
     { name: '80m', min: 3500000, max: 3800000 },

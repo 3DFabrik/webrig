@@ -79,43 +79,46 @@
                 <button class="tune-btn" data-dir="down" onmousedown="tuneHold('down')" onmouseup="tuneRelease()" onmouseleave="tuneRelease()" ontouchstart="tuneHold('down');event.preventDefault()" ontouchend="tuneRelease()">▼</button>
             </div>
 
-            <div class="band-row">
-                <label>Band:</label>
-                <div class="band-btn-group" id="band-btn-group">
-                    <button class="band-btn" data-band="2200m" data-freq="135700" onclick="switchBand(this)">2200m</button>
-                    <button class="band-btn" data-band="630m" data-freq="472000" onclick="switchBand(this)">630m</button>
-                    <button class="band-btn" data-band="160m" data-freq="1810000" onclick="switchBand(this)">160m</button>
-                    <button class="band-btn" data-band="80m" data-freq="3650000" onclick="switchBand(this)">80m</button>
-                    <button class="band-btn" data-band="60m" data-freq="5330000" onclick="switchBand(this)">60m</button>
-                    <button class="band-btn" data-band="40m" data-freq="7074000" onclick="switchBand(this)">40m</button>
-                    <button class="band-btn" data-band="30m" data-freq="10120000" onclick="switchBand(this)">30m</button>
-                    <button class="band-btn" data-band="20m" data-freq="14100000" onclick="switchBand(this)">20m</button>
-                    <button class="band-btn" data-band="17m" data-freq="18068000" onclick="switchBand(this)">17m</button>
-                    <button class="band-btn" data-band="15m" data-freq="21000000" onclick="switchBand(this)">15m</button>
-                    <button class="band-btn" data-band="12m" data-freq="24890000" onclick="switchBand(this)">12m</button>
-                    <button class="band-btn" data-band="10m" data-freq="28500000" onclick="switchBand(this)">10m</button>
-                    <button class="band-btn" data-band="6m" data-freq="50150000" onclick="switchBand(this)">6m</button>
-                    <button class="band-btn" data-band="4m" data-freq="70100000" onclick="switchBand(this)">4m</button>
-                    <button class="band-btn" data-band="2m" data-freq="145000000" onclick="switchBand(this)">2m</button>
-                    <button class="band-btn" data-band="70cm" data-freq="433000000" onclick="switchBand(this)">70cm</button>
-                    <button class="band-btn" data-band="23cm" data-freq="1291000000" onclick="switchBand(this)">23cm</button>
-                </div>
-            </div>
+        </div>
 
-            <div class="mode-row">
-                <label>Mode:</label>
-                <div class="mode-btn-group" id="mode-btn-group">
-                    <button class="mode-btn" data-mode="FM" onclick="setMode('FM')">FM</button>
-                    <button class="mode-btn" data-mode="USB" onclick="setMode('USB')">USB</button>
-                    <button class="mode-btn" data-mode="LSB" onclick="setMode('LSB')">LSB</button>
-                    <button class="mode-btn" data-mode="AM" onclick="setMode('AM')">AM</button>
-                    <button class="mode-btn" data-mode="CW" onclick="setMode('CW')">CW</button>
-                    <button class="mode-btn" data-mode="RTTY" onclick="setMode('RTTY')">RTTY</button>
-                    <button class="mode-btn" data-mode="PKTUSB" onclick="setMode('PKTUSB')">DIG-U</button>
-                    <button class="mode-btn" data-mode="PKTLSB" onclick="setMode('PKTLSB')">DIG-L</button>
-                </div>
+        <div class="panel band-panel">
+            <div class="panel-title">Band</div>
+            <div class="band-btn-group" id="band-btn-group">
+                <button class="band-btn" data-band="630m" data-freq="472000" onclick="switchBand(this)">630m</button>
+                <button class="band-btn" data-band="160m" data-freq="1810000" onclick="switchBand(this)">160m</button>
+                <button class="band-btn" data-band="80m" data-freq="3650000" onclick="switchBand(this)">80m</button>
+                <button class="band-btn" data-band="60m" data-freq="5330000" onclick="switchBand(this)">60m</button>
+                <button class="band-btn" data-band="40m" data-freq="7074000" onclick="switchBand(this)">40m</button>
+                <button class="band-btn" data-band="30m" data-freq="10120000" onclick="switchBand(this)">30m</button>
+                <button class="band-btn" data-band="20m" data-freq="14100000" onclick="switchBand(this)">20m</button>
+                <button class="band-btn" data-band="17m" data-freq="18068000" onclick="switchBand(this)">17m</button>
+                <button class="band-btn" data-band="15m" data-freq="21000000" onclick="switchBand(this)">15m</button>
+                <button class="band-btn" data-band="12m" data-freq="24890000" onclick="switchBand(this)">12m</button>
+                <button class="band-btn" data-band="10m" data-freq="28500000" onclick="switchBand(this)">10m</button>
+                <button class="band-btn" data-band="6m" data-freq="50150000" onclick="switchBand(this)">6m</button>
+                <button class="band-btn" data-band="4m" data-freq="70100000" onclick="switchBand(this)">4m</button>
+                <button class="band-btn" data-band="2m" data-freq="145000000" onclick="switchBand(this)">2m</button>
+                <button class="band-btn" data-band="70cm" data-freq="433000000" onclick="switchBand(this)">70cm</button>
+                <button class="band-btn" data-band="23cm" data-freq="1291000000" onclick="switchBand(this)">23cm</button>
             </div>
+        </div>
 
+        <div class="panel mode-panel">
+            <div class="panel-title">Mode</div>
+            <div class="mode-btn-group" id="mode-btn-group">
+                <button class="mode-btn" data-mode="FM" onclick="setMode('FM')">FM</button>
+                <button class="mode-btn" data-mode="USB" onclick="setMode('USB')">USB</button>
+                <button class="mode-btn" data-mode="LSB" onclick="setMode('LSB')">LSB</button>
+                <button class="mode-btn" data-mode="AM" onclick="setMode('AM')">AM</button>
+                <button class="mode-btn" data-mode="CW" onclick="setMode('CW')">CW</button>
+                <button class="mode-btn" data-mode="RTTY" onclick="setMode('RTTY')">RTTY</button>
+                <button class="mode-btn" data-mode="PKTUSB" onclick="setMode('PKTUSB')">DIG-U</button>
+                <button class="mode-btn" data-mode="PKTLSB" onclick="setMode('PKTLSB')">DIG-L</button>
+            </div>
+        </div>
+
+        <div class="panel rptr-panel">
+            <div class="panel-title">Repeater</div>
             <div class="rptr-row">
                 <label>Shift:</label>
                 <select id="shift-select" onchange="setShift(this.value)">
@@ -139,11 +142,6 @@
             </div>
         </div>
 
-        <div class="panel macros-panel">
-            <div class="panel-title">Quick Macros</div>
-            <div id="macro-list" class="macro-list"></div>
-            <button class="macro-add" onclick="addMacro()">+ Add Macro</button>
-        </div>
     </div>
 
     <!-- ─── Center Column: S-Meter + Stations ─── -->
@@ -294,11 +292,15 @@
                 <span id="tx-timeout-display"></span>
             </div>
         </div>
+
+        <div class="panel macros-panel">
+            <div class="panel-title">Quick Macros</div>
+            <div id="macro-list" class="macro-list"></div>
+            <button class="macro-add" onclick="addMacro()">+ Add Macro</button>
+        </div>
     </div>
 
 </div>
-
-<!-- Footer: Signal Processing -->
 <footer id="signal-footer">
     <div class="sig-control">
         <label>AGC</label>
