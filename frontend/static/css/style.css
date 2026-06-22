@@ -418,10 +418,10 @@ select, input[type="text"], input[type="number"], input[type="password"] {
 }
 .smeter-scale-btn.active { background: var(--accent); color: var(--text); border-color: var(--accent); }
 
-.smeter-analog-container { margin: 0.5em 0; display: flex; justify-content: center; }
-.smeter-content { display: flex; gap: 1em; align-items: flex-start; }
-.smeter-left { flex: 0 0 280px; }
-.smeter-right { flex: 1; min-width: 0; }
+.smeter-analog-container { display: flex; justify-content: center; align-items: center; }
+.smeter-content { display: flex; gap: 1em; align-items: stretch; }
+.smeter-left { flex: 0 0 380px; display: flex; align-items: center; justify-content: center; }
+.smeter-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
 .smeter-scale {
     display: flex;
@@ -524,7 +524,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 /* S-Meter Graph */
-.smeter-graph-section { margin-top: 0.5em; }
+.smeter-graph-section { flex: 1; display: flex; flex-direction: column; }
 
 .graph-controls {
     display: flex;
@@ -545,6 +545,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 #smeter-graph {
     width: 100%;
+    height: 120px;
     background: var(--bg-dark);
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -552,7 +553,9 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* Alarms */
 .smeter-alarms {
-    margin-top: 0.4em;
+    margin-top: 0.6em;
+    padding-top: 0.5em;
+    border-top: 1px solid var(--border);
     font-size: 0.75em;
 }
 .alarm-row {
