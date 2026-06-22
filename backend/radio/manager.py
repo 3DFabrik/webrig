@@ -99,6 +99,15 @@ class RadioManager:
             # Frequency / Mode / VFO
             self.state.frequency = await self.client.get_freq()
             self.state.mode, self.state.passband = await self.client.get_mode()
+            await self._emit("frequency", self.state.frequency)
+            await self._emit("mode", {"mode": self.state.mode, "passband": self.state.passband})
+
+            # Active VFO
+            try:
+                self.state.vfo = await self.client.get_vfo()
+                await self._emit("vfo", self.state.vfo)
+            except Exception:
+                pass
 
             # Read both VFOs
             try:
