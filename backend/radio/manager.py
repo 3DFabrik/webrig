@@ -141,9 +141,12 @@ class RadioManager:
                 try:
                     if self.client.has_get_level(feature):
                         val = await getter()
+                        log.info(f"{feature}: readback = {val}")
                         await emitter(val)
-                except Exception:
-                    log.debug(f"{feature}: readback failed")
+                    else:
+                        log.info(f"{feature}: no get_level support")
+                except Exception as e:
+                    log.warning(f"{feature}: readback failed: {e}")
 
             # Read and emit secondary controls with capability checks
             # Some radios support set but not get for certain levels (e.g. X6100 PREAMP/ATT)
