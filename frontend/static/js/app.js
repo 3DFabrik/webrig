@@ -231,6 +231,10 @@ socket.on('ptt', (on) => {
         btn.textContent = on ? `${db}dB` : 'OFF';
     });
 
+    socket.on('caps', (data) => {
+        handleCaps(data);
+    });
+
     socket.on('rig_caps', (data) => {
         // Radio capability info (preamp/att levels)
         const preampBtn = document.getElementById('preamp-btn');

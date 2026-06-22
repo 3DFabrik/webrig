@@ -213,17 +213,17 @@
 
             <div class="audio-control">
                 <label>AF Gain</label>
-                <input type="range" id="af-gain" min="0" max="100" value="50" oninput="setAF(this.value)">
+                <input type="range" id="af-gain" data-level="AF" min="0" max="100" value="50" oninput="setAF(this.value)">
                 <span id="af-val">50%</span>
             </div>
             <div class="audio-control">
                 <label>RF Gain</label>
-                <input type="range" id="rf-gain" min="0" max="100" value="100" oninput="setRF(this.value)">
+                <input type="range" id="rf-gain" data-level="RF" min="0" max="100" value="100" oninput="setRF(this.value)">
                 <span id="rf-val">100%</span>
             </div>
             <div class="audio-control">
                 <label>Squelch</label>
-                <input type="range" id="sql-gain" min="0" max="100" value="20" oninput="setSQL(this.value)">
+                <input type="range" id="sql-gain" data-level="SQL" min="0" max="100" value="20" oninput="setSQL(this.value)">
                 <span id="sql-val">20%</span>
             </div>
 
@@ -243,12 +243,12 @@
             <div class="panel-title">Transmit</div>
             <div class="rfpower-control">
                 <label>RF Power</label>
-                <input type="range" id="rfpower-slider" min="0" max="100" value="100" oninput="setRFPower(this.value)">
+                <input type="range" id="rfpower-slider" data-level="RFPOWER" min="0" max="100" value="100" oninput="setRFPower(this.value)">
                 <span id="rfpower-val">100%</span>
             </div>
             <div class="mic-control">
                 <label>Mic Gain</label>
-                <input type="range" id="mic-gain" min="0" max="100" value="70" oninput="setMicGain(this.value)">
+                <input type="range" id="mic-gain" data-level="MICGAIN" min="0" max="100" value="70" oninput="setMicGain(this.value)">
                 <span id="mic-val">70%</span>
             </div>
             <div class="audio-meters">
@@ -284,7 +284,7 @@
 <footer id="signal-footer">
     <div class="sig-control">
         <label>AGC</label>
-        <select id="agc-select" onchange="setAGC(this.value)">
+        <select id="agc-select" data-level="AGC" onchange="setAGC(this.value)">
             <option value="1">Super Fast</option>
             <option value="2" selected>Fast</option>
             <option value="3">Slow</option>
@@ -297,11 +297,11 @@
     </div>
     <div class="sig-control">
         <label>Preamp</label>
-        <button id="preamp-btn" onclick="togglePreamp()">OFF</button>
+        <button id="preamp-btn" data-level="PREAMP" onclick="togglePreamp()">OFF</button>
     </div>
     <div class="sig-control">
         <label>Attenuator</label>
-        <button id="att-btn" onclick="toggleAtt()">OFF</button>
+        <button id="att-btn" data-level="ATT" onclick="toggleAtt()">OFF</button>
     </div>
     <div class="sig-control">
         <label>Split</label>
@@ -626,6 +626,7 @@
 <script src="/static/js/audio.js"></script>
 <script src="/static/js/tx_audio.js"></script>
 <script src="/static/js/analog_smeter.js"></script>
-<script src="/static/js/app.js?v=3"></script>
+<script src="/static/js/caps_handler.js"></script>
+<script src="/static/js/app.js?v=4"></script>
 </body>
 </html>

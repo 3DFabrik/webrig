@@ -94,11 +94,11 @@ class RadioManager:
         await self._emit("connection", False)
 
     async def _full_poll(self):
-        """Poll all state values once, including both VFOs."""
+        """Poll all state values once, using universal caps scan."""
         try:
+            # Frequency / Mode / VFO
             self.state.frequency = await self.client.get_freq()
             self.state.mode, self.state.passband = await self.client.get_mode()
-            self.state.vfo = await self.client.get_vfo()
 
             # Read both VFOs
             try:
@@ -122,33 +122,38 @@ class RadioManager:
                                        "mode": self.state.vfo_b_mode,
                                        "passband": self.state.vfo_b_passband})
 
-            # Send available preamp/att levels to frontend
-            rfpower = await self.client.get_rfpower()
-            await self._emit("rig_caps", {
-                "preamp_levels": self.client.get_preamp_levels(),
-                "att_levels": self.client.get_attenuator_levels(),
-                "has_tuner": self.client.has_set_func("TUNER"),
-            })
-            await self._emit("rfpower", rfpower)
+            # ─── Universal Caps Scan ──────────────────────
+            from backend.radio.caps_scanner import scan_caps, read_all_values
+            caps_data = scan_caps(self.client._rig)
+            values = await read_all_values(self.client._rig, caps_data)
 
-            # Read and emit audio levels (AF, RF, SQL, MICGAIN)
-            for feature, getter, emitter in [
-                ("AF", self.client.get_af, lambda v: self._emit("af", v)),
-                ("RF", self.client.get_rf, lambda v: self._emit("rf", v)),
-                ("SQL", self.client.get_sql, lambda v: self._emit("sql", v)),
-                ("MICGAIN", self.client.get_micgain, lambda v: self._emit("micgain", v)),
-            ]:
-                try:
-                    if self.client.has_get_level(feature):
-                        val = await getter()
-                        log.info(f"{feature}: readback = {val}")
-                        await emitter(val)
-                    else:
-                        log.info(f"{feature}: no get_level support")
-                except Exception as e:
-                    log.warning(f"{feature}: readback failed: {e}")
+            # Merge values into caps_data
+            for short, info in caps_data["levels"].items():
+                info["value"] = values.get(short)
+            for short, info in caps_data["funcs"].items():
+                info["value"] = values.get(f"_func_{short}")
 
-            # Emit current split and PTT state
+            # Log what we found
+            level_count = len(caps_data["levels"])
+            func_count = len(caps_data["funcs"])
+            log.info(f"Caps scan: {level_count} levels, {func_count} funcs, "
+                     f"{len(caps_data['vfo_ops'])} vfo_ops")
+
+            await self._emit("caps", caps_data)
+
+            # ─── Backward-compatible value emits ─────────
+            # (frontend still uses per-control handlers)
+            level_map = {
+                "AF": "af", "RF": "rf", "SQL": "sql", "MICGAIN": "micgain",
+                "RFPOWER": "rfpower", "AGC": "agc", "PREAMP": "preamp",
+                "ATT": "attenuator",
+            }
+            for level_name, event_name in level_map.items():
+                val = values.get(level_name)
+                if val is not None:
+                    await self._emit(event_name, val)
+
+            # Split / PTT
             try:
                 split = await self.client.get_split()
                 self.state.split = split
@@ -156,23 +161,6 @@ class RadioManager:
             except Exception as e:
                 log.warning(f"Split readback failed: {e}")
             await self._emit("ptt", self.state.ptt)
-
-            # Read and emit secondary controls with capability checks
-            # Some radios support set but not get for certain levels (e.g. X6100 PREAMP/ATT)
-            for feature, getter, emitter, ctrl_id in [
-                ("AGC", self.client.get_agc, lambda v: self._emit("agc", v), "agc-select"),
-                ("PREAMP", self.client.get_preamp, lambda v: self._emit("preamp", v), "preamp-btn"),
-                ("ATT", self.client.get_attenuator, lambda v: self._emit("attenuator", v), "att-btn"),
-            ]:
-                try:
-                    if self.client.has_get_level(feature):
-                        val = await getter()
-                        await emitter(val)
-                    else:
-                        # Can set but not get — leave at default, frontend toggles locally
-                        log.info(f"{feature}: radio doesn't support readback, toggle-only")
-                except Exception:
-                    log.debug(f"{feature}: capability check failed")
 
         except Exception as e:
             log.warning(f"Full poll error: {e}")
