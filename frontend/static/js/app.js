@@ -192,16 +192,15 @@ socket.on('ptt', (on) => {
         if (smeterLabel) smeterLabel.textContent = on ? 'MIC' : 'S-Meter';
         if (on) {
             txAudio.startTransmit();
+            if (window.analogSMeter) window.analogSMater.setTXMode();
         } else {
             txAudio.stopTransmit();
-            // Reset peak hold when leaving TX
-            state.peakHold = 0;
-            document.getElementById('smeter-peak').style.opacity = '0';
         }
     });
 
     socket.on('smeter', (db) => {
-        updateSmeter(db);
+        if (window.analogSMeter) window.analogSMeter.updateRX(db);
+        updateSmeterReadout(db);
     });
 
     socket.on('split', (on) => {
@@ -527,39 +526,20 @@ function setPollRate(ms) {
     if (socket) socket.emit('set_poll_rate', parseInt(ms));
 }
 
-function updateSmeter(dbValue) {
-    // Ignore RX updates while transmitting
-    if (state.ptt) return;
-
-    // dbValue is dB relative to S9 (Hamlib STRENGTH convention)
-    // S0 = -127 dBm, S9 = -73 dBm, each S-unit = 6 dB
-    const smeterPercent = dbToPercent(dbValue);
-    const fill = document.getElementById('smeter-fill');
-    const peak = document.getElementById('smeter-peak');
-
-    fill.style.width = smeterPercent + '%';
-
-    // Peak hold
-    if (dbValue > state.peakHold) {
-        state.peakHold = dbValue;
-        peak.style.left = smeterPercent + '%';
-        peak.style.opacity = '1';
-        if (state.peakHoldTimer) clearTimeout(state.peakHoldTimer);
-        state.peakHoldTimer = setTimeout(() => {
-            state.peakHold = dbValue;
-            peak.style.opacity = '0';
-        }, state.peakHoldTime * 1000);
-    }
-
-    // Digital readout
+function updateSmeterReadout(dbValue) {
+    // Digital readout (analog needle handled by AnalogSMeter)
     const sUnits = dbToSUnits(dbValue);
-    const dbm = dbValue - 73; // relative to S9 → absolute dBm
+    const dbm = dbValue - 73;
     const uv = Math.pow(10, (dbm + 120) / 20);
 
-    document.getElementById('smeter-s-units').textContent = formatSUnits(sUnits);
-    document.getElementById('smeter-dbm').textContent = dbm.toFixed(0) + ' dBm';
-    document.getElementById('smeter-uv').textContent = uv.toFixed(1) + ' μV';
-    document.getElementById('smeter-raw').textContent = 'raw: ' + dbValue.toFixed(0);
+    const su = document.getElementById('smeter-s-units');
+    if (su) su.textContent = formatSUnits(sUnits);
+    const db = document.getElementById('smeter-dbm');
+    if (db) db.textContent = dbm.toFixed(0) + ' dBm';
+    const u = document.getElementById('smeter-uv');
+    if (u) u.textContent = uv.toFixed(1) + ' μV';
+    const rw = document.getElementById('smeter-raw');
+    if (rw) rw.textContent = 'raw: ' + dbValue.toFixed(0);
 
     // Graph data
     state.smeterHistory.push({ t: Date.now(), v: dbValue });
@@ -574,34 +554,16 @@ function updateMicMeter(level) {
     // level is 0.0-1.0 RMS from microphone
     if (!state.ptt) return;
 
-    // Map RMS to percentage (logarithmic)
-    const percent = level > 0.001 ? Math.min(100, (20 * Math.log10(level) + 60) / 60 * 100) : 0;
-    const fill = document.getElementById('smeter-fill');
-    const peak = document.getElementById('smeter-peak');
-    fill.style.width = percent + '%';
-
-    // Peak hold
-    if (percent > state.peakHold) {
-        state.peakHold = percent;
-        peak.style.left = percent + '%';
-        peak.style.opacity = '1';
-        if (state.peakHoldTimer) clearTimeout(state.peakHoldTimer);
-        state.peakHoldTimer = setTimeout(() => {
-            peak.style.opacity = '0';
-        }, state.peakHoldTime * 1000);
-    }
-
-    // Digital readout (show dBFS instead of dBm)
+    // Digital readout (analog needle handled by AnalogSMeter)
     const dbfs = level > 0 ? 20 * Math.log10(level) : -60;
-    document.getElementById('smeter-s-units').textContent = (dbfs > -10) ? 'HOT' : (dbfs > -30 ? 'OK' : 'LOW');
-    document.getElementById('smeter-dbm').textContent = dbfs.toFixed(0) + ' dBFS';
-    document.getElementById('smeter-uv').textContent = (level * 100).toFixed(0) + ' %';
-    document.getElementById('smeter-raw').textContent = 'mic: ' + level.toFixed(3);
-
-    // Graph data
-    state.smeterHistory.push({ t: Date.now(), v: dbfs + 33 });
-    pruneHistory();
-    drawSmeterGraph();
+    const su = document.getElementById('smeter-s-units');
+    if (su) su.textContent = (dbfs > -10) ? 'HOT' : (dbfs > -30 ? 'OK' : 'LOW');
+    const db = document.getElementById('smeter-dbm');
+    if (db) db.textContent = dbfs.toFixed(0) + ' dBFS';
+    const u = document.getElementById('smeter-uv');
+    if (u) u.textContent = (level * 100).toFixed(0) + ' %';
+    const rw = document.getElementById('smeter-raw');
+    if (rw) rw.textContent = 'mic: ' + level.toFixed(3);
 }
 
 function dbToPercent(db) {
@@ -1688,15 +1650,21 @@ function init() {
     document.getElementById('vfo-a-box')?.addEventListener('click', () => selectVFO('VFOA'));
     document.getElementById('vfo-b-box')?.addEventListener('click', () => selectVFO('VFOB'));
 
-    // Mic level → S-Meter during TX
-    txAudio.onMicLevel = (level) => updateMicMeter(level);
+    // Analog S-Meter init
+    const smeterCanvas = document.getElementById('smeter-canvas');
+    if (smeterCanvas) {
+        window.analogSMeter = new AnalogSMeter(smeterCanvas);
+    }
 
-    // RX/TX audio level meters
-    rxAudio.onRxLevel = (level) => updateRxMeter(level);
+    // Mic level → Analog S-Meter during TX + TX bar
     txAudio.onMicLevel = (level) => {
         updateMicMeter(level);
         updateTxMeter(level);
+        if (window.analogSMeter) window.analogSMeter.updateTXLevel(level);
     };
+
+    // RX audio level meter
+    rxAudio.onRxLevel = (level) => updateRxMeter(level);
 
     // Peak hold slider
     const peakSlider = document.getElementById('peak-hold-time');

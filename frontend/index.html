@@ -158,22 +158,9 @@
                 </span>
             </div>
 
-            <!-- Analog S-Meter Bar -->
-            <div class="smeter-bar-container">
-                <div class="smeter-scale">
-                    <span class="smark">S1</span>
-                    <span class="smark">S3</span>
-                    <span class="smark">S5</span>
-                    <span class="smark">S7</span>
-                    <span class="smark s9">S9</span>
-                    <span class="smark">+20</span>
-                    <span class="smark">+40</span>
-                    <span class="smark">+60</span>
-                </div>
-                <div class="smeter-bar">
-                    <div class="smeter-fill" id="smeter-fill"></div>
-                    <div class="smeter-peak" id="smeter-peak"></div>
-                </div>
+            <!-- Analog S-Meter -->
+            <div class="smeter-analog-container">
+                <canvas id="smeter-canvas"></canvas>
             </div>
 
             <!-- Digital Readout -->
@@ -664,6 +651,7 @@
 
 <script src="/static/js/audio.js"></script>
 <script src="/static/js/tx_audio.js"></script>
-<script src="/static/js/app.js?v=2"></script>
+<script src="/static/js/analog_smeter.js"></script>
+<script src="/static/js/app.js?v=3"></script>
 </body>
 </html>
