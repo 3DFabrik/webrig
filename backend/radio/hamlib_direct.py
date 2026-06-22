@@ -289,7 +289,7 @@ class HamlibDirectClient:
                 try:
                     return float(self._rig.get_level_f(Hamlib.RIG_VFO_CURR, token))
                 except Exception as e:
-                    log.debug(f"get_level_f({name}) failed: {e}")
+                    log.warning(f"get_level_f({name}) vfo fallback failed: {e}")
                     return 0.0
         return await self._run(_do)
 
@@ -306,7 +306,7 @@ class HamlibDirectClient:
                 try:
                     return int(self._rig.get_level_i(Hamlib.RIG_VFO_CURR, token))
                 except Exception as e:
-                    log.debug(f"get_level_i({name}) failed: {e}")
+                    log.warning(f"get_level_i({name}) vfo fallback failed: {e}")
                     return 0
         return await self._run(_do)
 
