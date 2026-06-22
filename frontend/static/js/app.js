@@ -192,9 +192,10 @@ socket.on('ptt', (on) => {
         if (smeterLabel) smeterLabel.textContent = on ? 'MIC' : 'S-Meter';
         if (on) {
             txAudio.startTransmit();
-            if (window.analogSMeter) window.analogSMater.setTXMode();
+            if (window.analogSMeter) window.analogSMeter.setTXMode();
         } else {
             txAudio.stopTransmit();
+            if (window.analogSMeter) window.analogSMeter.setRX(0);
         }
     });
 
