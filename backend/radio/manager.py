@@ -131,6 +131,20 @@ class RadioManager:
             })
             await self._emit("rfpower", rfpower)
 
+            # Read and emit audio levels (AF, RF, SQL, MICGAIN)
+            for feature, getter, emitter in [
+                ("AF", self.client.get_af, lambda v: self._emit("af", v)),
+                ("RF", self.client.get_rf, lambda v: self._emit("rf", v)),
+                ("SQL", self.client.get_sql, lambda v: self._emit("sql", v)),
+                ("MICGAIN", self.client.get_micgain, lambda v: self._emit("micgain", v)),
+            ]:
+                try:
+                    if self.client.has_get_level(feature):
+                        val = await getter()
+                        await emitter(val)
+                except Exception:
+                    log.debug(f"{feature}: readback failed")
+
             # Read and emit secondary controls with capability checks
             # Some radios support set but not get for certain levels (e.g. X6100 PREAMP/ATT)
             for feature, getter, emitter, ctrl_id in [

@@ -260,6 +260,34 @@ socket.on('ptt', (on) => {
         }
     });
 
+    socket.on('af', (val) => {
+        const slider = document.getElementById('af-gain');
+        const label = document.getElementById('af-val');
+        if (slider) slider.value = Math.round(val * 100);
+        if (label) label.textContent = Math.round(val * 100) + '%';
+    });
+
+    socket.on('rf', (val) => {
+        const slider = document.getElementById('rf-gain');
+        const label = document.getElementById('rf-val');
+        if (slider) slider.value = Math.round(val * 100);
+        if (label) label.textContent = Math.round(val * 100) + '%';
+    });
+
+    socket.on('sql', (val) => {
+        const slider = document.getElementById('sql-gain');
+        const label = document.getElementById('sql-val');
+        if (slider) slider.value = Math.round(val * 100);
+        if (label) label.textContent = Math.round(val * 100) + '%';
+    });
+
+    socket.on('micgain', (val) => {
+        const slider = document.getElementById('mic-gain');
+        const label = document.getElementById('mic-val');
+        if (slider) slider.value = Math.round(val * 100);
+        if (label) label.textContent = Math.round(val * 100) + '%';
+    });
+
     socket.on('capability_error', (data) => {
         // Disable controls the radio doesn't support
         const el = document.getElementById(data.control);
