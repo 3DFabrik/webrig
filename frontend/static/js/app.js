@@ -292,6 +292,7 @@ function setConnectionState(connected) {
 function showView(name) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + name).classList.add('active');
+    if (name === 'setup') loadConfigIntoSetup();
 }
 
 // ─── VFO ─────────────────────────────────────────
@@ -1251,6 +1252,8 @@ async function testRadioConnection() {
 
 async function saveSetup() {
     const cfg = getSetupConfig();
+    const profileId = document.getElementById('setup-profile-select')?.value;
+    if (profileId) cfg._profile_id = profileId;
     try {
         await fetch('/api/config', {
             method: 'POST',
@@ -1259,24 +1262,44 @@ async function saveSetup() {
         });
         const r = document.getElementById('radio-test-result') || {};
         if (r.textContent !== undefined) { r.textContent = '💾 Configuration saved.'; r.className = 'setup-test-result ok'; }
+        // Refresh profile data
+        await loadProfiles();
     } catch (e) { alert('Save failed: ' + e.message); }
 }
 
 async function applySetup() {
     const cfg = getSetupConfig();
+    const profileId = document.getElementById('setup-profile-select')?.value;
     const r = document.getElementById('radio-test-result');
     r.textContent = '⚡ Applying configuration...';
 
     try {
-        const resp = await fetch('/api/config/apply', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(cfg),
-        });
-        const data = await resp.json();
+        let resp, data;
+        if (profileId) {
+            // Use profile-based connect endpoint
+            // First save the profile, then connect
+            cfg._profile_id = profileId;
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(cfg),
+            });
+            resp = await fetch(`/api/radios/${profileId}/connect`, { method: 'POST' });
+            data = await resp.json();
+        } else {
+            // Fallback: flat config apply
+            resp = await fetch('/api/config/apply', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(cfg),
+            });
+            data = await resp.json();
+        }
         if (data.status === 'ok') {
             r.textContent = '✅ Applied! Radio: ' + (data.radio || 'connected');
             r.className = 'setup-test-result ok';
+            currentProfileId = profileId || data.active;
+            await loadProfiles();
         } else {
             r.textContent = '⚠ ' + (data.error || data.radio || 'Failed');
             r.className = 'setup-test-result fail';
@@ -1293,29 +1316,35 @@ async function scanAudio() {
         const data = await resp.json();
         const rxSel = document.getElementById('setup-rx-device');
         const txSel = document.getElementById('setup-tx-device');
+        const prevRx = rxSel.value;
+        const prevTx = txSel.value;
         rxSel.innerHTML = '';
         txSel.innerHTML = '';
 
-        const all = [...(data.capture || []), ...(data.playback || [])];
-        if (all.length === 0) {
-            rxSel.innerHTML = '<option>default</option>';
-            txSel.innerHTML = '<option>default</option>';
-            return;
-        }
+        // New API returns structured devices with name/hw/label
+        const capture = data.capture || [];
+        const playback = data.playback || [];
+        const allDevices = [...capture, ...playback];
 
-        // Parse ALSA device lines for hw:CARD=X,DEV=Y format
-        const devices = new Set(['default']);
-        all.forEach(line => {
-            const match = line.match(/card (\d+).*device (\d+)/i);
-            if (match) {
-                devices.add(`hw:CARD=${match[1]},DEV=${match[2]}`);
-            }
+        // "default" always first
+        rxSel.add(new Option('default', 'default'));
+        txSel.add(new Option('default', 'default'));
+
+        if (allDevices.length === 0) return;
+
+        // Deduplicate by hw string
+        const seen = new Set();
+        allDevices.forEach(d => {
+            const hw = d.hw || d;
+            if (seen.has(hw)) return;
+            seen.add(hw);
+            rxSel.add(new Option(d.label || hw, hw));
+            txSel.add(new Option(d.label || hw, hw));
         });
 
-        devices.forEach(d => {
-            rxSel.add(new Option(d, d));
-            txSel.add(new Option(d, d));
-        });
+        // Restore previous selections if still valid
+        if ([...rxSel.options].some(o => o.value === prevRx)) rxSel.value = prevRx;
+        if ([...txSel.options].some(o => o.value === prevTx)) txSel.value = prevTx;
     } catch (e) {
         console.error('Audio scan failed:', e);
     }
@@ -1342,28 +1371,189 @@ async function testPTT() {
 }
 
 async function loadConfigIntoSetup() {
-    try {
-        const resp = await fetch('/api/config');
-        const cfg = await resp.json();
-        const r = cfg.radio || {};
-        const a = cfg.audio || {};
-        const p = cfg.ptt || {};
+    // Load profile list and fill the active profile into the form
+    await loadProfiles();
+    if (currentProfileId) {
+        document.getElementById('setup-profile-select').value = currentProfileId;
+        loadProfileIntoSetup(currentProfileId);
+    }
+}
 
-        if (document.getElementById('setup-model')) {
-            document.getElementById('setup-model').value = r.model_id || '';
-            // If model ID exists, try to find its label for the search field
-            if (r.model_id) {
-                document.getElementById('setup-model-search').value = '';
-                document.getElementById('setup-model-search').placeholder = `Model #${r.model_id} (search to rename...)`;
-            }
-            document.getElementById('setup-device').value = r.serial_port || '/dev/ttyUSB0';
-            document.getElementById('setup-baudrate').value = r.serial_baud || 9600;
-            document.getElementById('setup-ptt-mode').value = p.mode || 'hamlib';
-            document.getElementById('setup-tx-timeout').value = p.tx_timeout || 180;
+// ─── Radio Profiles ────────────────────────────────
+let allProfiles = [];
+let currentProfileId = null;
+
+async function loadProfiles() {
+    try {
+        const resp = await fetch('/api/radios');
+        const data = await resp.json();
+        allProfiles = data.radios || [];
+        currentProfileId = data.active;
+        renderProfileSelector();
+        renderRadioSwitcher();
+    } catch (e) {
+        console.error('Failed to load profiles:', e);
+    }
+}
+
+function renderProfileSelector() {
+    const sel = document.getElementById('setup-profile-select');
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '';
+    allProfiles.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name + (p.active ? ' ●' : '');
+        if (p.id === currentProfileId) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+function renderRadioSwitcher() {
+    const sel = document.getElementById('radio-switcher');
+    if (!sel || allProfiles.length <= 1) {
+        if (sel) sel.style.display = 'none';
+        return;
+    }
+    sel.style.display = '';
+    sel.innerHTML = '';
+    allProfiles.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (p.active) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function onProfileSelect() {
+    const sel = document.getElementById('setup-profile-select');
+    if (!sel) return;
+    const pid = sel.value;
+    if (pid) loadProfileIntoSetup(pid);
+}
+
+async function switchRadio() {
+    const sel = document.getElementById('radio-switcher');
+    if (!sel) return;
+    const pid = sel.value;
+    if (!pid || pid === currentProfileId) return;
+
+    try {
+        const resp = await fetch(`/api/radios/${pid}/connect`, { method: 'POST' });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            currentProfileId = pid;
+            await loadProfiles(); // refresh selector
+        } else {
+            alert('Switch failed: ' + (data.radio || data.error));
         }
     } catch (e) {
-        console.error('Config load failed:', e);
+        alert('Switch failed: ' + e.message);
     }
+}
+
+async function loadProfileIntoSetup(profileId) {
+    const profile = allProfiles.find(p => p.id === profileId);
+    if (!profile) return;
+
+    const r = profile;
+    const a = profile.audio || {};
+    const p = profile.ptt || {};
+
+    // Profile name
+    // (set only via profile selector, not from form)
+
+    // Radio settings
+    if (document.getElementById('setup-model')) {
+        document.getElementById('setup-model').value = r.model_id || '';
+        // Show readable radio name in search field
+        const modelObj = allModels.find(m => m.id === r.model_id);
+        document.getElementById('setup-model-search').value = modelObj ? modelObj.label : `Model #${r.model_id}`;
+        document.getElementById('model-search-results')?.classList.remove('visible');
+    }
+    document.getElementById('setup-device').value = r.serial_port || '/dev/ttyUSB0';
+    document.getElementById('setup-baudrate').value = r.serial_baud || 19200;
+    if (document.getElementById('setup-databits')) document.getElementById('setup-databits').value = r.data_bits || 8;
+    if (document.getElementById('setup-stopbits')) document.getElementById('setup-stopbits').value = r.stop_bits || 1;
+    if (document.getElementById('setup-parity')) document.getElementById('setup-parity').value = r.parity || 'None';
+    if (document.getElementById('setup-flow')) document.getElementById('setup-flow').value = r.flow_control || 'None';
+
+    // Audio
+    document.getElementById('setup-rx-device').value = a.device_rx || 'default';
+    document.getElementById('setup-tx-device').value = a.device_tx || 'default';
+    if (document.getElementById('setup-sample-rate')) document.getElementById('setup-sample-rate').value = a.sample_rate || 48000;
+    if (document.getElementById('setup-chunk-ms')) document.getElementById('setup-chunk-ms').value = a.chunk_ms || 80;
+
+    // PTT
+    document.getElementById('setup-ptt-mode').value = p.mode || 'hamlib';
+    if (document.getElementById('setup-ptt-port')) document.getElementById('setup-ptt-port').value = p.serial_port || '';
+    if (document.getElementById('setup-tx-timeout')) document.getElementById('setup-tx-timeout').value = p.tx_timeout || 180;
+    togglePttSerial();
+}
+
+async function addNewProfile() {
+    const name = prompt('Name for new radio profile:');
+    if (!name) return;
+    const profileId = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    if (!profileId) { alert('Invalid name'); return; }
+    if (allProfiles.find(p => p.id === profileId)) { alert('Profile already exists'); return; }
+
+    // Create with current form values as template
+    const cfg = getSetupConfig();
+    const profile = {
+        name: name,
+        model_id: cfg.radio.model_id,
+        serial_port: cfg.radio.serial_port,
+        serial_baud: cfg.radio.serial_baud,
+        data_bits: cfg.radio.data_bits,
+        stop_bits: cfg.radio.stop_bits,
+        parity: cfg.radio.parity,
+        flow_control: cfg.radio.flow_control,
+        audio: cfg.audio,
+        ptt: cfg.ptt,
+    };
+
+    try {
+        const resp = await fetch('/api/radios', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: profileId, ...profile }),
+        });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            await loadProfiles();
+            document.getElementById('setup-profile-select').value = profileId;
+            loadProfileIntoSetup(profileId);
+        } else {
+            alert('Error: ' + (data.error || 'Unknown'));
+        }
+    } catch (e) { alert('Failed: ' + e.message); }
+}
+
+async function deleteProfile() {
+    if (allProfiles.length <= 1) { alert('Cannot delete the last profile'); return; }
+    const pid = document.getElementById('setup-profile-select').value;
+    if (!pid) return;
+    if (!confirm(`Delete profile "${pid}"?`)) return;
+
+    try {
+        const resp = await fetch(`/api/radios/${pid}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            await loadProfiles();
+            // Load the now-active profile
+            const newActive = data.data?.active;
+            if (newActive) {
+                document.getElementById('setup-profile-select').value = newActive;
+                loadProfileIntoSetup(newActive);
+            }
+        } else {
+            alert('Error: ' + (data.error || 'Unknown'));
+        }
+    } catch (e) { alert('Failed: ' + e.message); }
 }
 
 // ─── Hamlib Model Search ────────────────────────
@@ -1503,6 +1693,7 @@ function init() {
     loadConfigIntoSetup();
     loadModels();
     scanSerialPortsSetup();
+    scanAudio();
 }
 
 document.addEventListener('DOMContentLoaded', init);

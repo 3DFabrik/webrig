@@ -1,4 +1,5 @@
 config.local.yaml
+radios.yaml
 users.json
 __pycache__/
 *.pyc

@@ -12,6 +12,7 @@
 <header id="topbar">
     <div class="logo">🔊 WebRig</div>
     <div class="status">
+        <select id="radio-switcher" class="radio-switcher" onchange="switchRadio()" style="display:none"></select>
         <span id="radio-status" class="status-dot disconnected" title="Radio"></span>
         <span id="radio-status-text">Disconnected</span>
     </div>
@@ -564,15 +565,17 @@
                 <button onclick="showView('operator')" class="header-btn">← Back</button>
             </div>
 
-            <div class="setup-tabs">
-                <button class="setup-tab-btn active" onclick="setupTab('radio', this)">📻 Radio</button>
-                <button class="setup-tab-btn" onclick="setupTab('audio', this)">🔊 Audio</button>
-                <button class="setup-tab-btn" onclick="setupTab('ptt', this)">🎤 PTT</button>
-                <button class="setup-tab-btn" onclick="setupTab('dsp', this)">🎵 DSP</button>
+            <!-- Profile Selector -->
+            <div class="profile-selector">
+                <label>Radio Profile:</label>
+                <select id="setup-profile-select" onchange="onProfileSelect()"></select>
+                <button onclick="addNewProfile()" class="setup-action" title="Add new profile">+ New</button>
+                <button onclick="deleteProfile()" class="setup-action danger" title="Delete profile">🗑</button>
             </div>
 
-            <!-- Radio Tab -->
-            <div class="setup-tab-content active" id="setup-radio">
+            <!-- ─── Radio Connection ─── -->
+            <div class="setup-section">
+                <div class="setup-section-title">📻 Radio</div>
                 <div class="setup-form-grid">
                     <label>Hamlib Model</label>
                     <div class="model-select-wrapper">
@@ -610,11 +613,15 @@
                 <div id="radio-test-result" class="setup-test-result"></div>
             </div>
 
-            <!-- Audio Tab -->
-            <div class="setup-tab-content" id="setup-auto">
+            <!-- ─── Audio Devices ─── -->
+            <div class="setup-section">
+                <div class="setup-section-title">🔊 Audio</div>
                 <div class="setup-form-grid">
                     <label>RX Device</label>
-                    <select id="setup-rx-device"><option>default</option></select>
+                    <div style="display:flex;gap:4px">
+                        <select id="setup-rx-device" style="flex:1"><option>default</option></select>
+                        <button onclick="scanAudio()" class="setup-action" style="white-space:nowrap;padding:4px 8px" title="Scan audio devices">🔍</button>
+                    </div>
                     <label>TX Device</label>
                     <select id="setup-tx-device"><option>default</option></select>
                     <label>Sample Rate</label>
@@ -623,21 +630,19 @@
                         <option value="16000">16000 Hz</option>
                         <option value="48000" selected>48000 Hz</option>
                     </select>
-                    <label>Channels</label>
-                    <select id="setup-channels"><option selected>1 (Mono)</option><option>2 (Stereo)</option></select>
                     <label>Chunk Size (ms)</label>
                     <input type="number" id="setup-chunk-ms" value="80" min="20" max="500">
                 </div>
                 <div class="setup-actions">
-                    <button onclick="scanAudio()" class="setup-action">🔍 Scan Devices</button>
                     <button onclick="testRxAudio()" class="setup-action">🔊 Test RX</button>
                     <button onclick="testTxAudio()" class="setup-action">🎤 Test TX</button>
                 </div>
                 <div id="audio-test-result" class="setup-test-result"></div>
             </div>
 
-            <!-- PTT Tab -->
-            <div class="setup-tab-content" id="setup-ptt">
+            <!-- ─── PTT ─── -->
+            <div class="setup-section">
+                <div class="setup-section-title">🎤 PTT</div>
                 <div class="setup-form-grid">
                     <label>PTT Method</label>
                     <select id="setup-ptt-mode" onchange="togglePttSerial()">
@@ -655,51 +660,6 @@
                     <button onclick="testPTT()" class="setup-action">🔴 Test PTT (2s)</button>
                 </div>
                 <div id="ptt-test-result" class="setup-test-result"></div>
-            </div>
-
-            <!-- DSP Tab -->
-            <div class="setup-tab-content" id="setup-dsp">
-                <div class="dsp-control">
-                    <input type="checkbox" id="setup-nr-enable">
-                    <label>Noise Reduction</label>
-                    <input type="range" id="setup-nr-strength" min="0" max="100" value="50">
-                    <span id="setup-nr-val">50%</span>
-                </div>
-                <div class="dsp-control">
-                    <input type="checkbox" id="setup-notch-enable">
-                    <label>Notch Filter</label>
-                    <select id="setup-notch-mode">
-                        <option value="auto">Auto-Notch</option>
-                        <option value="manual">Manual</option>
-                    </select>
-                    <label>Freq (Hz)</label>
-                    <input type="number" id="setup-notch-freq" value="1000" min="100" max="5000" disabled>
-                </div>
-                <div class="dsp-control">
-                    <input type="checkbox" id="setup-comp-enable">
-                    <label>TX Compressor</label>
-                    <input type="range" id="setup-comp-strength" min="0" max="100" value="30">
-                </div>
-                <div class="eq-section">
-                    <h4>Equalizer RX</h4>
-                    <div class="eq-row">
-                        <label>Bass</label>
-                        <input type="range" min="-12" max="12" value="0">
-                        <label>Mid</label>
-                        <input type="range" min="-12" max="12" value="0">
-                        <label>Treble</label>
-                        <input type="range" min="-12" max="12" value="0">
-                    </div>
-                    <h4>Equalizer TX</h4>
-                    <div class="eq-row">
-                        <label>Bass</label>
-                        <input type="range" min="-12" max="12" value="0">
-                        <label>Mid</label>
-                        <input type="range" min="-12" max="12" value="0">
-                        <label>Treble</label>
-                        <input type="range" min="-12" max="12" value="0">
-                    </div>
-                </div>
             </div>
 
             <div class="setup-save-bar">
