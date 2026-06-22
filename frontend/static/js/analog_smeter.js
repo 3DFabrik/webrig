@@ -116,13 +116,6 @@ class AnalogSMeter {
         ctx.strokeStyle = this.scaleColor;
         ctx.stroke();
 
-        // Inner reference arc
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius - 26, startAngle, endAngle);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = this.scaleDim;
-        ctx.stroke();
-
         if (this.isTX) {
             this._drawTXScale(ctx, cx, cy, radius, startAngle, endAngle);
         } else {
@@ -139,20 +132,20 @@ class AnalogSMeter {
         const tx = cx + Math.cos(needleAngle) * (needleLen - tipLen);
         const ty = cy + Math.sin(needleAngle) * (needleLen - tipLen);
 
-        // Needle line (white base)
+        // Needle shaft (red)
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(tx, ty);
         ctx.lineWidth = 2.5;
-        ctx.strokeStyle = this.scaleColor;
+        ctx.strokeStyle = this.needleColor;
         ctx.stroke();
 
-        // Needle tip (colored)
+        // Needle tip (white)
         ctx.beginPath();
         ctx.moveTo(tx, ty);
         ctx.lineTo(nx, ny);
         ctx.lineWidth = 2.5;
-        ctx.strokeStyle = this.needleColor;
+        ctx.strokeStyle = this.scaleColor;
         ctx.stroke();
 
         // Center pivot
@@ -203,22 +196,16 @@ class AnalogSMeter {
             { s: 6, label: 'S6', major: true },
             { s: 7, label: '', major: false },
             { s: 8, label: 'S8', major: true },
-            { s: 9, label: 'S9', major: true },
-            { s: 10, label: '', major: false },
-            { s: 11, label: '+20', major: true },
-            { s: 12, label: '', major: false },
-            { s: 13, label: '+40', major: true },
-            { s: 14, label: '', major: false },
-            { s: 15, label: '+60', major: true },
+            { s: 9, label: 'S9', major: true, red: true },
+            { s: 10, label: '', major: false, red: true },
+            { s: 11, label: '+20', major: true, red: true },
+            { s: 12, label: '', major: false, red: true },
+            { s: 13, label: '+40', major: true, red: true },
+            { s: 14, label: '', major: false, red: true },
+            { s: 15, label: '+60', major: true, red: true },
         ];
 
-        // Subtle zone shading from S9+
-        const s9Angle = startAngle + (9 / 15) * totalSweep;
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius - 1, s9Angle, endAngle);
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = 'rgba(255,51,51,0.15)';
-        ctx.stroke();
+
 
         for (const tick of tickDefs) {
             const frac = tick.s / 15;
@@ -228,18 +215,19 @@ class AnalogSMeter {
             const y1 = cy + Math.sin(angle) * (radius - tickLen);
             const x2 = cx + Math.cos(angle) * radius;
             const y2 = cy + Math.sin(angle) * radius;
+            const tickColor = tick.red ? this.redZone : this.scaleColor;
             ctx.beginPath();
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
             ctx.lineWidth = tick.major ? 2 : 1;
-            ctx.strokeStyle = this.scaleColor;
+            ctx.strokeStyle = tickColor;
             ctx.stroke();
 
             if (tick.major) {
                 const labelR = radius - 28;
                 const lx = cx + Math.cos(angle) * labelR;
                 const ly = cy + Math.sin(angle) * labelR;
-                ctx.fillStyle = this.scaleColor;
+                ctx.fillStyle = tickColor;
                 ctx.font = 'bold 11px monospace';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
