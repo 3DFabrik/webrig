@@ -419,6 +419,9 @@ select, input[type="text"], input[type="number"], input[type="password"] {
 .smeter-scale-btn.active { background: var(--accent); color: var(--text); border-color: var(--accent); }
 
 .smeter-analog-container { margin: 0.5em 0; display: flex; justify-content: center; }
+.smeter-content { display: flex; gap: 1em; align-items: flex-start; }
+.smeter-left { flex: 0 0 280px; }
+.smeter-right { flex: 1; min-width: 0; }
 
 .smeter-scale {
     display: flex;
