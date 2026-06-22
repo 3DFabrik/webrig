@@ -207,6 +207,8 @@ class HamlibDirectClient:
         return await self._run(_do)
 
     async def set_vfo(self, vfo: str) -> bool:
+        # Normalize: 'VFOA'→'A', 'VFOB'→'B' (Hamlib constants are RIG_VFO_A/B)
+        vfo = vfo.replace('VFO', '')
         def _do():
             try:
                 const = getattr(Hamlib, f'RIG_VFO_{vfo}', None)
@@ -219,10 +221,12 @@ class HamlibDirectClient:
         return await self._run(_do)
 
     async def get_freq_vfo(self, vfo: str) -> int:
+        vfo = vfo.replace('VFO', '')
         const = getattr(Hamlib, f'RIG_VFO_{vfo}', Hamlib.RIG_VFO_A)
         return await self.get_freq(const)
 
     async def get_mode_vfo(self, vfo: str) -> tuple:
+        vfo = vfo.replace('VFO', '')
         const = getattr(Hamlib, f'RIG_VFO_{vfo}', Hamlib.RIG_VFO_A)
         return await self.get_mode(const)
 
