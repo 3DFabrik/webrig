@@ -148,6 +148,15 @@ class RadioManager:
                 except Exception as e:
                     log.warning(f"{feature}: readback failed: {e}")
 
+            # Emit current split and PTT state
+            try:
+                split = await self.client.get_split()
+                self.state.split = split
+                await self._emit("split", split)
+            except Exception as e:
+                log.warning(f"Split readback failed: {e}")
+            await self._emit("ptt", self.state.ptt)
+
             # Read and emit secondary controls with capability checks
             # Some radios support set but not get for certain levels (e.g. X6100 PREAMP/ATT)
             for feature, getter, emitter, ctrl_id in [
