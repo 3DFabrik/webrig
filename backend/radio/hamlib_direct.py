@@ -224,7 +224,7 @@ class HamlibDirectClient:
     async def get_ptt(self) -> bool:
         def _do():
             try:
-                return bool(self._rig.get_ptt())
+                return bool(self._rig.get_ptt(Hamlib.RIG_VFO_CURR))
             except Exception:
                 return False
         return await self._run(_do)
@@ -232,7 +232,7 @@ class HamlibDirectClient:
     async def set_ptt(self, on: bool) -> bool:
         def _do():
             try:
-                self._rig.set_ptt(1 if on else 0)
+                self._rig.set_ptt(Hamlib.RIG_VFO_CURR, 1 if on else 0)
                 return True
             except Exception as e:
                 log.debug(f"set_ptt error: {e}")
