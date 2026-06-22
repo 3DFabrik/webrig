@@ -511,12 +511,6 @@ function setDCS(code) {
 }
 
 // ─── S-Meter ─────────────────────────────────────
-function setSmeterScale(scale) {
-    state.smeterScale = scale;
-    document.querySelectorAll('.smeter-scale-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
-}
-
 function setAttack(mode) {
     state.attack = mode;
     document.querySelectorAll('.attack-btn').forEach(b => b.classList.remove('active'));
@@ -1620,13 +1614,6 @@ function init() {
 
     // RX audio level meter
     rxAudio.onRxLevel = (level) => updateRxMeter(level);
-
-    // Peak hold slider
-    const peakSlider = document.getElementById('peak-hold-time');
-    peakSlider.oninput = () => {
-        state.peakHoldTime = parseInt(peakSlider.value);
-        document.getElementById('peak-hold-val').textContent = state.peakHoldTime + 's';
-    };
 
     // Check admin status
     if (window.CURRENT_USER && window.CURRENT_USER.admin) {
