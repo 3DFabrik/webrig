@@ -34,8 +34,15 @@ class RxAudio {
             this.processor = this.audioCtx.createScriptProcessor(1024, 1, 1);
             this.processor.onaudioprocess = (e) => {
                 const output = e.outputBuffer.getChannelData(0);
+                let sum = 0;
                 for (let i = 0; i < output.length; i++) {
-                    output[i] = this._pcmBuffer.length > 0 ? this._pcmBuffer.shift() : 0;
+                    const s = this._pcmBuffer.length > 0 ? this._pcmBuffer.shift() : 0;
+                    output[i] = s;
+                    sum += s * s;
+                }
+                if (this.onRxLevel) {
+                    const rms = Math.sqrt(sum / output.length);
+                    this.onRxLevel(Math.min(1.0, rms));
                 }
             };
             this.processor.connect(this.audioCtx.destination);

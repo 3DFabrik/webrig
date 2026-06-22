@@ -613,6 +613,23 @@ function dbToPercent(db) {
     return ((clamped - minDb) / (maxDb - minDb)) * 100;
 }
 
+// ─── RX / TX Audio Level Meters ─────────────────────────
+function rmsToPercent(rms) {
+    // Logarithmic scaling: -60dBFS (0.001) → 0%, 0dBFS (1.0) → 100%
+    if (rms < 0.001) return 0;
+    return Math.min(100, Math.max(0, (20 * Math.log10(rms) + 60) / 60 * 100));
+}
+
+function updateRxMeter(level) {
+    const meter = document.getElementById('rx-meter');
+    if (meter) meter.style.width = rmsToPercent(level) + '%';
+}
+
+function updateTxMeter(level) {
+    const meter = document.getElementById('tx-meter');
+    if (meter) meter.style.width = rmsToPercent(level) + '%';
+}
+
 function dbToSUnits(db) {
     // db is relative to S9
     if (db >= 0) return 9 + db / 6;
@@ -1673,6 +1690,13 @@ function init() {
 
     // Mic level → S-Meter during TX
     txAudio.onMicLevel = (level) => updateMicMeter(level);
+
+    // RX/TX audio level meters
+    rxAudio.onRxLevel = (level) => updateRxMeter(level);
+    txAudio.onMicLevel = (level) => {
+        updateMicMeter(level);
+        updateTxMeter(level);
+    };
 
     // Peak hold slider
     const peakSlider = document.getElementById('peak-hold-time');

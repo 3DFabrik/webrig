@@ -284,9 +284,13 @@ class HamlibDirectClient:
 
         def _do():
             try:
-                return float(self._rig.get_level_f(token))
+                return float(self._rig.get_level_f(Hamlib.RIG_VFO_CURR, token))
             except Exception:
-                return 0.0
+                try:
+                    return float(self._rig.get_level_f(token))
+                except Exception as e:
+                    log.debug(f"get_level_f({name}) failed: {e}")
+                    return 0.0
         return await self._run(_do)
 
     async def get_level_int(self, name: str) -> int:
@@ -297,9 +301,13 @@ class HamlibDirectClient:
 
         def _do():
             try:
-                return int(self._rig.get_level_i(token))
+                return int(self._rig.get_level_i(Hamlib.RIG_VFO_CURR, token))
             except Exception:
-                return 0
+                try:
+                    return int(self._rig.get_level_i(token))
+                except Exception as e:
+                    log.debug(f"get_level_i({name}) failed: {e}")
+                    return 0
         return await self._run(_do)
 
     async def set_level(self, name: str, value) -> bool:
@@ -309,11 +317,15 @@ class HamlibDirectClient:
 
         def _do():
             try:
-                self._rig.set_level(token, float(value))
+                self._rig.set_level(Hamlib.RIG_VFO_CURR, token, float(value))
                 return True
-            except Exception as e:
-                log.debug(f"set_level {name} error: {e}")
-                return False
+            except Exception:
+                try:
+                    self._rig.set_level(token, float(value))
+                    return True
+                except Exception as e:
+                    log.debug(f"set_level {name} error: {e}")
+                    return False
         return await self._run(_do)
 
     # ─── S-Meter ──────────────────────────────────────────────
@@ -330,9 +342,13 @@ class HamlibDirectClient:
 
         def _do():
             try:
-                return float(self._rig.get_level_i(token))
+                return float(self._rig.get_level_i(Hamlib.RIG_VFO_CURR, token))
             except Exception:
-                return 0.0
+                try:
+                    return float(self._rig.get_level_i(token))
+                except Exception as e:
+                    log.debug(f"get_smeter failed: {e}")
+                    return 0.0
         return await self._run(_do)
 
     # ─── AGC ──────────────────────────────────────────────────
