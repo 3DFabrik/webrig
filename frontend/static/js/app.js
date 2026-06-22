@@ -235,6 +235,14 @@ socket.on('ptt', (on) => {
         handleCaps(data);
     });
 
+    // Generic level/func updates (from features panel or other radios)
+    socket.on('level', (data) => {
+        if (data && data.name) onLevelUpdate(data.name, data.value);
+    });
+    socket.on('func', (data) => {
+        if (data && data.name) onFuncUpdate(data.name, data.value);
+    });
+
     socket.on('rig_caps', (data) => {
         // Radio capability info (preamp/att levels)
         const preampBtn = document.getElementById('preamp-btn');

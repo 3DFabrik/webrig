@@ -154,6 +154,44 @@ def init_radio():
         radio._smeter_interval = int(ms) / 1000
         log.info(f"SMeter poll rate set to {ms}ms")
 
+    # ─── Generic Level/Func/Parm/VFO-Op handlers ────────
+    @sio.on("set_level")
+    async def on_set_level(sid, data):
+        """Generic: {name: 'NR', value: 0.5}"""
+        name = data.get("name", "")
+        val = data.get("value")
+        if not name or val is None:
+            return
+        try:
+            ok = await radio.client.set_level(name, val)
+            if ok:
+                await radio._emit("level", {"name": name, "value": val})
+        except Exception as e:
+            log.warning(f"set_level {name}={val}: {e}")
+
+    @sio.on("set_func")
+    async def on_set_func(sid, data):
+        """Generic: {name: 'NR', value: true}"""
+        name = data.get("name", "")
+        val = bool(data.get("value", False))
+        if not name:
+            return
+        try:
+            ok = await radio.client.set_func(name, val)
+            if ok:
+                await radio._emit("func", {"name": name, "value": val})
+        except Exception as e:
+            log.warning(f"set_func {name}={val}: {e}")
+
+    @sio.on("vfo_op")
+    async def on_vfo_op(sid, data):
+        """Generic: {name: 'TUNE'} or string 'TUNE'"""
+        name = data.get("name", data) if isinstance(data, dict) else data
+        try:
+            await radio.client.vfo_op(name)
+        except Exception as e:
+            log.warning(f"vfo_op {name}: {e}")
+
     # Wire radio manager events → SocketIO broadcast
     async def on_radio_change(event, value):
         await sio.emit(event, value)
