@@ -25,8 +25,12 @@ def init_radio():
     @sio.on("connect")
     async def on_connect(sid, environ):
         log.info(f"Client connected: {sid}")
-        if radio.state.connected:
+        if radio and radio.state.connected:
             await sio.emit("connection", True, to=sid)
+            # Re-send current radio state to the new client
+            await radio._full_poll()
+        else:
+            await sio.emit("connection", False, to=sid)
             await _push_full_state(sid)
 
     @sio.on("disconnect")
