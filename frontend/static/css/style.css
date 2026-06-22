@@ -418,49 +418,94 @@ select, input[type="text"], input[type="number"], input[type="password"] {
 }
 .smeter-scale-btn.active { background: var(--accent); color: var(--text); border-color: var(--accent); }
 
-/* S-Meter Panel */
-.smeter-panel { display: flex; flex-direction: column; gap: 0.5em; }
-.smeter-content { display: flex; gap: 1em; align-items: stretch; }
-.smeter-left { flex: 0 0 380px; display: flex; align-items: center; justify-content: center; }
-.smeter-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.4em; }
+.smeter-analog-container { margin: 0.5em 0; display: flex; justify-content: center; }
+.smeter-content { display: flex; gap: 1em; align-items: flex-start; }
+.smeter-left { flex: 0 0 280px; }
+.smeter-right { flex: 1; min-width: 0; }
 
-/* Graph */
-.graph-controls {
+.smeter-scale {
     display: flex;
-    gap: 0.4em;
-    align-items: center;
+    justify-content: space-between;
+    font-size: 0.6em;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+    font-family: var(--font-mono);
 }
+.smark { }
+.smark.s9 { color: var(--s9-color); font-weight: 700; }
 
-.graph-controls button, .graph-controls select {
-    background: var(--bg-dark);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0.25em 0.6em;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8em;
-}
-
-#smeter-graph {
-    width: 100%;
-    flex: 1;
-    min-height: 100px;
+.smeter-bar {
+    height: 24px;
     background: var(--bg-dark);
     border: 1px solid var(--border);
     border-radius: 4px;
+    position: relative;
+    overflow: hidden;
 }
 
-/* Alarms */
-.smeter-alarms { font-size: 0.8em; }
-.alarm-row {
+.smeter-fill {
+    height: 100%;
+    background: linear-gradient(90deg,
+        #1a3a5c 0%,        /* S1-S3 blue-dark */
+        #2d5a8e 25%,       /* S5 blue */
+        #3fb950 50%,       /* S7-S9 green */
+        #d29922 65%,       /* S9+ yellow */
+        #da3633 90%,       /* S9+40 red */
+        #f85149 100%       /* S9+60 bright red */
+    );
+    width: 0%;
+    transition: width 0.15s ease-out;
+    border-radius: 3px;
+}
+
+.smeter-peak {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: #fff;
+    left: 0%;
+    transition: left 0.3s ease-out, opacity 0.3s;
+    box-shadow: 0 0 4px rgba(255,255,255,0.8);
+}
+
+.smeter-readout {
+    display: flex;
+    gap: 1em;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    margin: 0.4em 0;
+}
+#smeter-s-units { color: var(--s9-color); font-weight: 700; min-width: 60px; }
+#smeter-dbm { color: var(--text); min-width: 80px; }
+#smeter-uv { color: var(--text-dim); min-width: 70px; }
+#smeter-raw { color: var(--text-dim); font-size: 0.8em; }
+
+.smeter-options {
     display: flex;
     align-items: center;
     gap: 0.4em;
+    font-size: 0.75em;
     flex-wrap: wrap;
+    padding: 0.4em 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
 }
-.alarm-row .sep { color: var(--border); }
-.alarm-row input[type="number"] { width: 40px; }
-.alarm-row label { color: var(--text-dim); }
+
+.smeter-options label { color: var(--text-dim); }
+.smeter-options .sep { color: var(--border); }
+
+.attack-btn, .smeter-scale-btn {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.75em;
+}
+.attack-btn.active { background: var(--accent); color: var(--text); }
 
 input[type="range"] {
     -webkit-appearance: none;
@@ -477,6 +522,48 @@ input[type="range"]::-webkit-slider-thumb {
     background: var(--accent);
     cursor: pointer;
 }
+
+/* S-Meter Graph */
+.smeter-graph-section { margin-top: 0.5em; }
+
+.graph-controls {
+    display: flex;
+    gap: 0.3em;
+    align-items: center;
+    margin-bottom: 0.3em;
+}
+
+.graph-controls button, .graph-controls select {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.2em 0.5em;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75em;
+}
+
+#smeter-graph {
+    width: 100%;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+/* Alarms */
+.smeter-alarms {
+    margin-top: 0.4em;
+    font-size: 0.75em;
+}
+.alarm-row {
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
+    flex-wrap: wrap;
+}
+.alarm-row .sep { color: var(--border); }
+.alarm-row input[type="number"] { width: 40px; }
+.alarm-row label { color: var(--text-dim); }
 
 /* ═══ Stations (Mini) ═══ */
 .stations-mini { flex: 1; overflow-y: auto; }

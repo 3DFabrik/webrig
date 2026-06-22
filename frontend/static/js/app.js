@@ -564,10 +564,6 @@ function pruneHistory() {
 function drawSmeterGraph() {
     const canvas = document.getElementById('smeter-graph');
     if (!canvas) return;
-    // Fit canvas to container
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width > 0) canvas.width = Math.round(rect.width);
-    if (rect.height > 0) canvas.height = Math.round(rect.height);
     const ctx = canvas.getContext('2d');
     const w = canvas.width;
     const h = canvas.height;
