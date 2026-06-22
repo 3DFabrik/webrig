@@ -46,6 +46,13 @@ for _name in dir(Hamlib):
         _short = _name.replace("RIG_FUNC_", "")
         _FUNC_CONSTANTS[_short] = getattr(Hamlib, _name)
 
+# ─── VFO operation token cache ──────────────────────────────
+_VFO_OP_CONSTANTS = {}
+for _name in dir(Hamlib):
+    if _name.startswith("RIG_OP_"):
+        _short = _name.replace("RIG_OP_", "")
+        _VFO_OP_CONSTANTS[_short] = getattr(Hamlib, _name)
+
 
 def list_supported_models() -> dict:
     """Return {model_id: 'Mfg Model'} for all hamlib models."""
@@ -498,6 +505,33 @@ class HamlibDirectClient:
             return False
         try:
             return bool(self._rig.caps.has_set_func & const)
+        except Exception:
+            return False
+
+    # ─── VFO Operations (TUNE, CPY, XCHG, etc.) ──────────────
+
+    async def vfo_op(self, name: str) -> bool:
+        """Execute a VFO operation (e.g. TUNE)."""
+        const = _VFO_OP_CONSTANTS.get(name.upper())
+        if const is None:
+            return False
+
+        def _do():
+            try:
+                self._rig.vfo_op(Hamlib.RIG_VFO_CURR, const)
+                return True
+            except Exception as e:
+                log.error(f"vfo_op({name}) failed: {e}")
+                return False
+        return await self._run(_do)
+
+    def has_vfo_op(self, name: str) -> bool:
+        """Check if the radio supports a VFO operation."""
+        const = _VFO_OP_CONSTANTS.get(name.upper())
+        if const is None or self._rig is None:
+            return False
+        try:
+            return bool(self._rig.caps.vfo_ops & const)
         except Exception:
             return False
 

@@ -116,18 +116,29 @@ def init_radio():
         log.info(f"set_tuner received: on={on}, radio={radio is not None}")
         if radio is None:
             return
-        # Check if radio supports TUNER func
-        if not radio.client.has_set_func("TUNER"):
-            log.info("Radio does not support TUNER func")
-            await radio._emit("tuner", "unsupported")
+        if not on:
+            await radio._emit("tuner", "off")
             return
-        if on:
+        # Prefer RIG_OP_TUNE (VFO operation) — works for Icom IC-7300 etc.
+        if radio.client.has_vfo_op("TUNE"):
+            log.info("Using vfo_op(TUNE)")
+            ok = await radio.client.vfo_op("TUNE")
+            if ok:
+                await radio._emit("tuner", "tuning")
+                asyncio.create_task(_poll_tuner(radio))
+            else:
+                log.warning("vfo_op(TUNE) returned False")
+                await radio._emit("tuner", "error")
+            return
+        # Fallback: set_func(TUNER) for radios that support it
+        if radio.client.has_set_func("TUNER"):
+            log.info("Using set_func(TUNER)")
             await radio.client.set_func("TUNER", True)
             await radio._emit("tuner", "tuning")
             asyncio.create_task(_poll_tuner(radio))
-        else:
-            await radio.client.set_func("TUNER", False)
-            await radio._emit("tuner", "off")
+            return
+        log.info("Radio does not support TUNE")
+        await radio._emit("tuner", "unsupported")
 
     @sio.on("set_rfpower")
     async def on_set_rfpower(sid, val):
@@ -149,28 +160,13 @@ def init_radio():
 
 
 async def _poll_tuner(radio):
-    """Poll tuner status until tuning completes.
-    Falls get_func always returns 0 (SWIG binding bug),
-    we use a fixed wait time as fallback."""
+    """Wait for ATU tuning to complete.
+    Since we can't reliably poll tuner status on all radios,
+    we use a fixed wait time (IC-7300 typically takes 2-5s)."""
     log = logging.getLogger(__name__)
-    max_wait = 10  # seconds timeout
-    got_real_status = False
-
-    for _ in range(max_wait * 4):  # poll every 250ms
-        await asyncio.sleep(0.25)
-        still_tuning = await radio.client.get_func("TUNER")
-        if still_tuning:
-            got_real_status = True
-        elif got_real_status:
-            # Was tuning, now done — real transition
-            await radio._emit("tuner", "done")
-            log.info("ATU tuning complete (real status)")
-            return
-        # If we never got a real status, keep waiting (fixed time)
-
-    # Either timed out, or fixed wait elapsed without real status
+    await asyncio.sleep(5)
     await radio._emit("tuner", "done")
-    log.info("ATU tuning done (fixed wait or no status available)")
+    log.info("ATU tuning done (fixed wait)")
 
 
 async def _push_full_state(sid):
