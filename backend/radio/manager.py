@@ -163,12 +163,10 @@ class RadioManager:
                     swr = await self.client.get_swr()
                     alc = await self.client.get_alc()
                     log.info(f"TX poll: SWR={swr}, ALC={alc}")
-                    if swr != getattr(self.state, 'swr', -1):
-                        self.state.swr = swr
-                        await self._emit("swr", swr)
-                    if alc != getattr(self.state, 'alc', -1):
-                        self.state.alc = alc
-                        await self._emit("alc", alc)
+                    self.state.swr = swr
+                    self.state.alc = alc
+                    await self._emit("swr", swr)
+                    await self._emit("alc", alc)
                 else:
                     # RX: normal S-Meter
                     db = await self.client.get_smeter()
