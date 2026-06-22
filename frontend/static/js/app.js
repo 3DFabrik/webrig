@@ -143,11 +143,11 @@ function connectSocket() {
     });
 
     // ─── RF Power ───────────────────────────────────
-function setRFPower(val) {
+window.setRFPower = function(val) {
     const pct = Math.round(val);
     document.getElementById('rfpower-val').textContent = pct + '%';
     if (socket) socket.emit('set_rfpower', parseFloat(val) / 100);
-}
+};
 
 socket.on('rfpower', (val) => {
     const pct = Math.round(val * 100);
