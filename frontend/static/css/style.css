@@ -1049,7 +1049,7 @@ select, input[type="text"], input[type="number"], input[type="password"] {
 
 /* ═══ Features Panel (Universal) ═══ */
 .features-panel-container {
-    grid-column: span 2;
+    /* in center column now */
 }
 
 .features-panel {
