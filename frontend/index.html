@@ -155,25 +155,20 @@
             <!-- Analog S-Meter + Graph side by side -->
             <div class="smeter-content">
                 <div class="smeter-left">
-                    <div class="smeter-analog-container">
-                        <canvas id="smeter-canvas"></canvas>
-                    </div>
+                    <canvas id="smeter-canvas"></canvas>
                 </div>
 
                 <div class="smeter-right">
-                    <!-- Live Graph -->
-                    <div class="smeter-graph-section">
-                        <div class="graph-controls">
-                            <button onclick="toggleRecording()" id="record-btn">⏺ Record</button>
-                            <button onclick="exportRecording()">⬇ Export</button>
-                            <select id="graph-window" onchange="setGraphWindow(this.value)">
-                                <option value="5">5 min</option>
-                                <option value="30" selected>30 min</option>
-                                <option value="120">2 hours</option>
-                            </select>
-                        </div>
-                        <canvas id="smeter-graph" width="400" height="120"></canvas>
+                    <div class="graph-controls">
+                        <button onclick="toggleRecording()" id="record-btn">⏺ Record</button>
+                        <button onclick="exportRecording()">⬇ Export</button>
+                        <select id="graph-window" onchange="setGraphWindow(this.value)">
+                            <option value="5">5 min</option>
+                            <option value="30" selected>30 min</option>
+                            <option value="120">2 hours</option>
+                        </select>
                     </div>
+                    <canvas id="smeter-graph"></canvas>
                 </div>
             </div>
 
