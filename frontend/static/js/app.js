@@ -1196,8 +1196,8 @@ function getSetupConfig() {
         audio: {
             device_rx: document.getElementById('setup-rx-device').value,
             device_tx: document.getElementById('setup-tx-device').value,
-            sample_rate: parseInt(document.getElementById('setup-sample-rate').value),
-            chunk_ms: parseInt(document.getElementById('setup-chunk-ms').value),
+            sample_rate: 8000,
+            chunk_ms: 20,
         },
         ptt: {
             mode: document.getElementById('setup-ptt-mode').value,

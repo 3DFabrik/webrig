@@ -26,6 +26,23 @@ from backend.audio.tx_pipeline import TxPipeline
 rx_audio = RxPipeline()
 tx_audio = TxPipeline()
 
+
+def _reconfigure_audio(rx_device: str, tx_device: str, sample_rate: int = None):
+    """Hot-swap audio pipelines with new device settings."""
+    # Stop existing pipelines
+    rx_audio.stop()
+    tx_audio.stop()
+    # Apply new settings
+    rx_audio.device = rx_device
+    tx_audio.device = tx_device
+    if sample_rate:
+        rx_audio.squelch_threshold = get("audio.squelch_threshold", 300)
+    # Restart
+    rx_audio.start(asyncio.get_event_loop())
+    tx_audio.start()
+    logger.info(f"Audio reconfigured: RX={rx_device}, TX={tx_device}")
+
+
 logger = logging.getLogger(__name__)
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -239,6 +256,13 @@ async def apply_config(request: Request):
     radio.on_change(on_radio_change)
 
     ok = await radio.connect()
+
+    # Reconfigure audio if settings changed
+    new_rx = body.get("audio", {}).get("device_rx", rx_audio.device)
+    new_tx = body.get("audio", {}).get("device_tx", tx_audio.device)
+    if new_rx != rx_audio.device or new_tx != tx_audio.device:
+        _reconfigure_audio(new_rx, new_tx)
+
     return {"status": "ok" if ok else "error",
             "radio": "connected" if ok else "failed to connect"}
 
@@ -371,6 +395,13 @@ async def connect_radio(profile_id: str):
         await sio.emit(event, value)
     radio.on_change(on_radio_change)
     ok = await radio.connect()
+
+    # Reconfigure audio for this profile
+    audio_cfg = profile.get("audio", {})
+    new_rx = audio_cfg.get("device_rx", "default")
+    new_tx = audio_cfg.get("device_tx", "default")
+    _reconfigure_audio(new_rx, new_tx)
+
     return {"status": "ok" if ok else "error",
             "radio": "connected" if ok else "failed",
             "active": profile_id}
@@ -464,15 +495,15 @@ async def serial_ports():
 def _parse_alsa_devices(output: str):
     """Parse `aplay -l` / `arecord -l` output into structured device list.
 
-    Returns list of dicts:
-      {hw: 'hw:CARD=0,DEV=0', card: 0, device: 0,
-       name: 'USB Audio CODEC', subdevices: 1}
+    Works with any locale (English, German, etc.).
+    Uses card name (not number) for persistent hw identification.
     """
     devices = []
     for line in output.splitlines():
-        # Example: "card 0: Codec [USB Audio CODEC], device 0: ..."
+        # English: "card 0: Codec [USB Audio CODEC], device 0: ..."
+        # German:  "Karte 0: Device [USB Audio Device], Gerät 0: ..."
         m = re.match(
-            r'card\s+(\d+):\s+(.+?)\s+\[(.+?)\],\s+device\s+(\d+):',
+            r'(?:card|Karte)\s+(\d+):\s+(\S+)\s+\[([^\]]+)\],\s+(?:device|Gerät|Ger\xe4t)\s+(\d+):',
             line
         )
         if m:
@@ -481,7 +512,7 @@ def _parse_alsa_devices(output: str):
             card_name = m.group(3).strip()
             dev_num = int(m.group(4))
             devices.append({
-                "hw": f"hw:CARD={card_num},DEV={dev_num}",
+                "hw": f"plughw:CARD={card_id},DEV={dev_num}",
                 "card": card_num,
                 "device": dev_num,
                 "card_id": card_id,
