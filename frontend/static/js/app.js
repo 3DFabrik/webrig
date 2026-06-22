@@ -528,52 +528,20 @@ function setPollRate(ms) {
 }
 
 function updateSmeterReadout(dbValue) {
-    // Digital readout (analog needle handled by AnalogSMeter)
-    const sUnits = dbToSUnits(dbValue);
-    const dbm = dbValue - 73;
-    const uv = Math.pow(10, (dbm + 120) / 20);
-
-    const su = document.getElementById('smeter-s-units');
-    if (su) su.textContent = formatSUnits(sUnits);
-    const db = document.getElementById('smeter-dbm');
-    if (db) db.textContent = dbm.toFixed(0) + ' dBm';
-    const u = document.getElementById('smeter-uv');
-    if (u) u.textContent = uv.toFixed(1) + ' μV';
-    const rw = document.getElementById('smeter-raw');
-    if (rw) rw.textContent = 'raw: ' + dbValue.toFixed(0);
-
-    // Graph data
+    // Analog needle handled by AnalogSMeter — keep graph/alarm only
     state.smeterHistory.push({ t: Date.now(), v: dbValue });
     pruneHistory();
     drawSmeterGraph();
-
-    // Check alarms
     checkAlarms(dbValue);
 }
 
 function updateMicMeter(level) {
-    // level is 0.0-1.0 RMS from microphone
+    // Analog needle handled by AnalogSMeter — keep graph only
     if (!state.ptt) return;
-
-    // Digital readout (analog needle handled by AnalogSMeter)
     const dbfs = level > 0 ? 20 * Math.log10(level) : -60;
-    const su = document.getElementById('smeter-s-units');
-    if (su) su.textContent = (dbfs > -10) ? 'HOT' : (dbfs > -30 ? 'OK' : 'LOW');
-    const db = document.getElementById('smeter-dbm');
-    if (db) db.textContent = dbfs.toFixed(0) + ' dBFS';
-    const u = document.getElementById('smeter-uv');
-    if (u) u.textContent = (level * 100).toFixed(0) + ' %';
-    const rw = document.getElementById('smeter-raw');
-    if (rw) rw.textContent = 'mic: ' + level.toFixed(3);
-}
-
-function dbToPercent(db) {
-    // Map -127 dB (S0) to +60 dB over S9 to 0-100%
-    // S0 = -127+73 = -54 from S9, S9+60 = +60
-    const minDb = -54;
-    const maxDb = 60;
-    const clamped = Math.max(minDb, Math.min(maxDb, db));
-    return ((clamped - minDb) / (maxDb - minDb)) * 100;
+    state.smeterHistory.push({ t: Date.now(), v: dbfs + 33 });
+    pruneHistory();
+    drawSmeterGraph();
 }
 
 // ─── RX / TX Audio Level Meters ─────────────────────────
@@ -591,20 +559,6 @@ function updateRxMeter(level) {
 function updateTxMeter(level) {
     const meter = document.getElementById('tx-meter');
     if (meter) meter.style.width = rmsToPercent(level) + '%';
-}
-
-function dbToSUnits(db) {
-    // db is relative to S9
-    if (db >= 0) return 9 + db / 6;
-    return Math.max(0, 9 + db / 6);
-}
-
-function formatSUnits(s) {
-    if (s >= 9) {
-        const over = Math.round((s - 9) * 6);
-        return 'S9+' + over + 'dB';
-    }
-    return 'S' + Math.max(1, Math.round(s));
 }
 
 function pruneHistory() {

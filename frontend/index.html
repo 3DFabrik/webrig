@@ -164,32 +164,6 @@
                     <div class="smeter-analog-container">
                         <canvas id="smeter-canvas"></canvas>
                     </div>
-
-                    <!-- Digital Readout -->
-                    <div class="smeter-readout">
-                        <span id="smeter-s-units">—</span>
-                        <span id="smeter-dbm">—</span>
-                        <span id="smeter-uv">—</span>
-                        <span id="smeter-raw" class="debug">raw: —</span>
-                    </div>
-
-                    <!-- Peak/Average Controls -->
-                    <div class="smeter-options">
-                        <label>Peak Hold:</label>
-                        <input type="range" id="peak-hold-time" min="0" max="10" value="3" step="1">
-                        <span id="peak-hold-val">3s</span>
-                        <span class="sep">│</span>
-                        <label>Attack:</label>
-                        <button class="attack-btn active" onclick="setAttack('fast')">Fast</button>
-                        <button class="attack-btn" onclick="setAttack('slow')">Slow</button>
-                        <span class="sep">│</span>
-                        <label>Poll:</label>
-                        <select id="poll-rate" onchange="setPollRate(this.value)">
-                            <option value="100">Fast (100ms)</option>
-                            <option value="200" selected>Normal (200ms)</option>
-                            <option value="500">Slow (500ms)</option>
-                        </select>
-                    </div>
                 </div>
 
                 <div class="smeter-right">
